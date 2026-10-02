@@ -23,6 +23,16 @@ export class WebsiteBuilder {
       'build an app with preview',
       'create an interactive website',
       'build a restaurant website',
+      'pomodoro timer',
+      'coffee roastery',
+      'snake game',
+      'todo app',
+      'build a tool',
+      'create a tool',
+      'make a tool',
+      'build a game',
+      'create a game',
+      'make a game',
     ];
 
     if (triggerPhrases.some((phrase) => p.includes(phrase))) {
@@ -30,8 +40,19 @@ export class WebsiteBuilder {
     }
 
     // Secondary checks for strong website intent
-    const hasBuildVerb = p.includes('build') || p.includes('create') || p.includes('make') || p.includes('design');
-    const hasWebNoun = p.includes('website') || p.includes('webpage') || p.includes('landing page') || p.includes('portfolio site');
+    const hasBuildVerb = p.includes('build') || p.includes('create') || p.includes('make') || p.includes('design') || p.includes('code');
+    const hasWebNoun =
+      p.includes('website') ||
+      p.includes('webpage') ||
+      p.includes('web page') ||
+      p.includes('landing page') ||
+      p.includes('portfolio') ||
+      p.includes('web app') ||
+      p.includes('dashboard') ||
+      p.includes('calculator') ||
+      p.includes('timer') ||
+      p.includes('todo') ||
+      p.includes('game');
     return hasBuildVerb && hasWebNoun;
   }
 

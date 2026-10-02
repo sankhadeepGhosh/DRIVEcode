@@ -20,10 +20,15 @@ import {
   Sliders,
   CheckCircle2,
   Loader2,
-  AlertCircle
+  Share2,
+  Clock,
+  Layers,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { GeneratedProject, Message } from '../types';
 import { WebsiteBuilder } from '../lib/preview/project-manager';
+import { AgentActionTree } from './AgentActionTree';
 
 interface WebsiteStudioProps {
   project: GeneratedProject | null;
@@ -47,16 +52,20 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   messages = [],
 }) => {
   const [viewTab, setViewTab] = useState<'preview' | 'code'>('preview');
+  const [sideTab, setSideTab] = useState<'details' | 'previewing'>('previewing');
   const [mobileTab, setMobileTab] = useState<'chat' | 'preview'>('chat');
   const [promptInput, setPromptInput] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
   const [previewKey, setPreviewKey] = useState(0);
   const [fontSerifMode, setFontSerifMode] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const prevBuildingRef = useRef(isBuilding);
 
   const suggestionCards = [
     'A pomodoro timer with ambient gradient',
@@ -65,12 +74,29 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
     'Todo app with local storage',
   ];
 
-  // Auto-switch to preview on mobile when new project builds
+  // Live ticking timer while building
   useEffect(() => {
-    if (project && !isBuilding) {
-      // Keep mobile preview updated
+    let interval: any;
+    if (isBuilding) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds((s) => s + 1);
+      }, 1000);
     }
-  }, [project, isBuilding]);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isBuilding]);
+
+  // Phone auto-jump: "It jumps to the preview by itself when the page is done."
+  useEffect(() => {
+    if (prevBuildingRef.current && !isBuilding && project) {
+      if (window.innerWidth < 768) {
+        setMobileTab('preview');
+      }
+    }
+    prevBuildingRef.current = isBuilding;
+  }, [isBuilding, project]);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -79,6 +105,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
 
     onBuild(cleanPrompt);
     setPromptInput('');
+    setSideTab('previewing');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
@@ -91,17 +118,27 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   const handleCardClick = (cardPrompt: string) => {
     if (isBuilding) return;
     onBuild(cardPrompt);
+    setSideTab('previewing');
     if (window.innerWidth < 768) {
       setMobileTab('preview');
     }
   };
 
   const handleCopyCode = () => {
-    const code = project?.files?.[0]?.content || '';
+    const code = project?.files?.[0]?.content || WebsiteBuilder.generateSandboxHtml(project?.files || []);
     if (!code) return;
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleShare = () => {
+    const code = project?.files?.[0]?.content || WebsiteBuilder.generateSandboxHtml(project?.files || []);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code);
+      setCopiedShare(true);
+      setTimeout(() => setCopiedShare(false), 2000);
+    }
   };
 
   const handleDownload = () => {
@@ -136,82 +173,193 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   const websiteMessages = messages.filter(
     (m) =>
       m.role === 'user' ||
-      (m.role === 'assistant' && (m.content.includes('```html') || m.content.includes('Website') || m.generatedProject))
+      (m.role === 'assistant' && (m.content.includes('<!DOCTYPE html') || m.content.includes('```html') || m.generatedProject))
   );
 
+  // Compute active building step based on elapsed time or completion
+  const stepProgress = {
+    step1: isBuilding ? elapsedSeconds >= 1 : Boolean(project),
+    step2: isBuilding ? elapsedSeconds >= 3 : Boolean(project),
+    step3: isBuilding ? elapsedSeconds >= 7 : Boolean(project),
+    step4: isBuilding ? elapsedSeconds >= 12 : Boolean(project),
+    step5: !isBuilding && Boolean(project),
+  };
+
+  const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
   return (
-    <div className={`w-full h-full flex flex-col bg-[var(--rose-background)] text-[var(--rose-text)] transition-colors ${fontSerifMode ? 'font-serif' : 'font-sans'}`}>
-      {/* Top Header Bar */}
-      <header className="h-14 border-b border-[var(--rose-border)] bg-[var(--rose-background)] px-4 flex items-center justify-between shrink-0 z-30">
-        {/* Left: Brand Logo & Title */}
+    <div
+      className={`w-full h-full flex flex-col transition-colors ${
+        fontSerifMode ? 'font-serif' : 'font-sans'
+      } ${
+        isDarkMode
+          ? 'bg-black text-white'
+          : 'bg-white text-black'
+      }`}
+      style={{
+        backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
+        color: isDarkMode ? '#FFFFFF' : '#000000',
+      }}
+    >
+      {/* ======================================================== */}
+      {/* TOP HEADER BAR (Exact Lovable / Forge Studio Top Bar) */}
+      {/* ======================================================== */}
+      <header
+        className={`h-14 px-4 flex items-center justify-between shrink-0 z-30 border-b ${
+          isDarkMode ? 'border-[#171717] bg-black' : 'border-gray-200 bg-white'
+        }`}
+      >
+        {/* Left: Back to Chat & Brand Logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={onExitToChat}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-lg text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-surface-card)] transition-colors cursor-pointer"
-            title="Return to standard chat"
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+              isDarkMode
+                ? 'bg-[#111111] hover:bg-[#1a1a1a] text-neutral-300 hover:text-white border border-[#222222]'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black border border-gray-200'
+            }`}
+            title="Return to standard chat conversation"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Back to Chat</span>
+            <span>Back to Chat</span>
           </button>
+
+          <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
 
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-[#EA580C] text-white flex items-center justify-center font-serif font-bold text-sm shadow-sm">
               F
             </div>
-            <span className="font-serif text-lg font-bold tracking-tight text-[var(--rose-text)]">
+            <span className="font-serif text-lg font-bold tracking-tight">
               Forge
             </span>
-            <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded-md bg-[#EA580C]/15 text-[#EA580C] font-semibold uppercase tracking-wider">
+            <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#EA580C]/15 text-[#EA580C] font-semibold uppercase tracking-wider">
               Studio
+            </span>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-1 text-xs text-neutral-400 pl-2">
+            <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />
+            <span className="font-medium text-neutral-300">
+              {project?.title || 'Prompt Playground'}
             </span>
           </div>
         </div>
 
-        {/* Right: Preview/Code Switcher, Theme Toggle, Settings */}
+        {/* Center: Live Browser Address Bar Preview Controls */}
+        <div className="hidden md:flex items-center gap-1.5 bg-[#0a0a0a] border border-[#222222] rounded-full px-3 py-1 text-xs text-neutral-400">
+          <button
+            onClick={() => setPreviewKey((k) => k + 1)}
+            className="hover:text-white transition-colors cursor-pointer p-0.5"
+            title="Reload frame"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+          <span className="text-[11px] text-neutral-300 font-mono px-2">
+            {project ? `${project.title.toLowerCase().replace(/\s+/g, '-')}.local` : 'forge.sandbox/app'}
+          </span>
+          {project && (
+            <button
+              onClick={handleOpenNewTab}
+              className="hover:text-white transition-colors cursor-pointer p-0.5"
+              title="Open sandbox in new tab"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          )}
+        </div>
+
+        {/* Right: Preview/Code Switcher, Share, Download, Theme Toggle, Settings */}
         <div className="flex items-center gap-2">
-          {/* Preview / Code Pill Toggle (shown on desktop or when project exists) */}
-          <div className="flex items-center bg-[var(--rose-surface-card)] border border-[var(--rose-border)] p-0.5 rounded-xl text-xs">
+          {/* Preview / Code Pill Toggle (Exact Match to Image 1) */}
+          <div
+            className={`flex items-center p-0.5 rounded-xl text-xs border ${
+              isDarkMode ? 'bg-[#0a0a0a] border-[#222222]' : 'bg-gray-100 border-gray-200'
+            }`}
+          >
             <button
               onClick={() => {
                 setViewTab('preview');
                 setMobileTab('preview');
               }}
-              className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                 viewTab === 'preview'
                   ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
-                  : 'text-[var(--rose-text-muted)] hover:text-[var(--rose-text)]'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Preview
+              <Eye className="w-3 h-3" />
+              <span>Preview</span>
             </button>
             <button
               onClick={() => {
                 setViewTab('code');
                 setMobileTab('preview');
               }}
-              className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+              className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                 viewTab === 'code'
                   ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
-                  : 'text-[var(--rose-text-muted)] hover:text-[var(--rose-text)]'
+                  : 'text-neutral-400 hover:text-white'
               }`}
             >
-              Code
+              <Code2 className="w-3 h-3" />
+              <span>Code</span>
             </button>
           </div>
+
+          {/* Share Button */}
+          {project && (
+            <button
+              onClick={handleShare}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+                isDarkMode
+                  ? 'bg-[#0a0a0a] hover:bg-[#141414] border-[#222222] text-neutral-300 hover:text-white'
+                  : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
+              }`}
+              title="Copy project sandbox HTML"
+            >
+              {copiedShare ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+              <span>{copiedShare ? 'Copied' : 'Share'}</span>
+            </button>
+          )}
+
+          {/* Download Button */}
+          {project && (
+            <button
+              onClick={handleDownload}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+                isDarkMode
+                  ? 'bg-neutral-800 hover:bg-neutral-700 text-white'
+                  : 'bg-gray-900 hover:bg-black text-white'
+              }`}
+              title="Download standalone HTML file"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export</span>
+            </button>
+          )}
 
           {/* Pure Dark / Pure White Theme Toggle */}
           <button
             onClick={onToggleTheme}
-            className="p-2 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-surface-card)] rounded-xl transition-colors cursor-pointer"
-            title={`Switch to ${theme === 'dark' ? 'Pure White Light Mode' : 'Complete Dark Mode'}`}
+            className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+              isDarkMode
+                ? 'bg-[#0a0a0a] border-[#222222] text-neutral-300 hover:text-white'
+                : 'bg-gray-100 border-gray-200 text-gray-700 hover:text-black'
+            }`}
+            title={`Switch to ${isDarkMode ? 'Pure White Light Mode (#FFFFFF)' : 'Pure Black Dark Mode (#000000)'}`}
           >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-neutral-700" />}
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-neutral-700" />}
           </button>
 
           {/* Settings Modal Button */}
           <button
             onClick={onOpenSettings}
-            className="p-2 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-surface-card)] rounded-xl transition-colors cursor-pointer"
+            className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+              isDarkMode
+                ? 'bg-[#0a0a0a] border-[#222222] text-neutral-300 hover:text-white'
+                : 'bg-gray-100 border-gray-200 text-gray-700 hover:text-black'
+            }`}
             title="Settings"
           >
             <Sliders className="w-4 h-4" />
@@ -219,92 +367,305 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
         </div>
       </header>
 
-      {/* Main Studio Body Workspace */}
+      {/* ======================================================== */}
+      {/* MAIN STUDIO WORKSPACE */}
+      {/* ======================================================== */}
       <div className="flex-1 flex overflow-hidden relative">
         {/* ======================================================== */}
-        {/* LEFT COLUMN: Builder Controls & Chat Prompts (Desktop & Mobile Chat Tab) */}
+        {/* LEFT COLUMN: Prompt Playground & Progress Checklist (Desktop & Mobile Chat Tab) */}
         {/* ======================================================== */}
         <div
-          className={`flex flex-col h-full overflow-hidden transition-all duration-200 border-r border-[var(--rose-border)] ${
-            mobileTab === 'chat' ? 'w-full md:w-[420px] lg:w-[460px] flex' : 'hidden md:flex md:w-[420px] lg:w-[460px]'
-          } shrink-0 bg-[var(--rose-background)]`}
+          className={`flex flex-col h-full overflow-hidden transition-all duration-200 border-r ${
+            mobileTab === 'chat' ? 'w-full md:w-[440px] lg:w-[480px] flex' : 'hidden md:flex md:w-[440px] lg:w-[480px]'
+          } shrink-0 ${isDarkMode ? 'border-[#171717] bg-black' : 'border-gray-200 bg-white'}`}
+          style={{ backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }}
         >
-          {/* Scrollable Conversation & Suggestion Area */}
-          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6 custom-scrollbar">
-            {/* Editorial Heading */}
-            <div className="space-y-2 pt-2">
-              <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-[var(--rose-text)] leading-tight">
-                What should we build today?
-              </h1>
-              <p className="text-xs sm:text-sm text-[var(--rose-text-muted)] leading-relaxed">
-                Describe a page, game or tool. Forge writes the code and runs it live.
-              </p>
-            </div>
-
-            {/* Quick Starters Suggestion Cards */}
-            <div className="space-y-2 pt-1">
-              {suggestionCards.map((suggestion, idx) => (
+          {/* Sub-Header: Details vs Previewing Tabs (Exact Match to Image 1) */}
+          <div
+            className={`px-5 py-3 border-b flex items-center justify-between shrink-0 ${
+              isDarkMode ? 'border-[#171717] bg-[#050505]' : 'border-gray-200 bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-neutral-400">Mode</span>
+              <div
+                className={`flex items-center p-0.5 rounded-lg border text-xs ${
+                  isDarkMode ? 'bg-[#0a0a0a] border-[#222222]' : 'bg-gray-200 border-gray-300'
+                }`}
+              >
                 <button
-                  key={idx}
-                  onClick={() => handleCardClick(suggestion)}
-                  disabled={isBuilding}
-                  className="w-full text-left p-3.5 rounded-2xl bg-[var(--rose-surface-card)] border border-[var(--rose-border)] hover:border-[#EA580C]/60 text-xs sm:text-[13px] text-[var(--rose-text)] hover:text-[#EA580C] font-medium transition-all shadow-2xs hover:shadow-xs group cursor-pointer disabled:opacity-50"
+                  onClick={() => setSideTab('details')}
+                  className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                    sideTab === 'details'
+                      ? 'bg-neutral-800 text-white font-semibold'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
                 >
-                  <span className="block truncate">{suggestion}</span>
+                  Details
                 </button>
-              ))}
+                <button
+                  onClick={() => setSideTab('previewing')}
+                  className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                    sideTab === 'previewing'
+                      ? 'bg-[#EA580C] text-white font-semibold'
+                      : 'text-neutral-400 hover:text-white'
+                  }`}
+                >
+                  Previewing
+                </button>
+              </div>
             </div>
 
-            {/* Recent Iterations / Prompt History */}
-            {websiteMessages.length > 0 && (
-              <div className="space-y-3 pt-4 border-t border-[var(--rose-border)]">
-                <span className="text-[11px] font-semibold text-[var(--rose-text-muted)] uppercase tracking-wider block">
-                  Project Iterations
-                </span>
-                {websiteMessages.slice(-6).map((msg) => (
+            {/* Live Ticking Timer Indicator */}
+            {isBuilding ? (
+              <div className="flex items-center gap-1.5 text-xs text-[#EA580C] font-mono font-semibold animate-pulse">
+                <Clock className="w-3.5 h-3.5" />
+                <span>{`0:${elapsedSeconds < 10 ? `0${elapsedSeconds}` : elapsedSeconds}s`}</span>
+              </div>
+            ) : project ? (
+              <div className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Ready</span>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Scrollable Conversation & Suggestion Area */}
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 custom-scrollbar">
+            {/* If Previewing Tab is active: Show Progress / Ticking Checklist & Prompts */}
+            {sideTab === 'previewing' ? (
+              <>
+                {/* Real-time Ticking Checklist when Building (Image 1 Feature) */}
+                {(isBuilding || project) && (
                   <div
-                    key={msg.id}
-                    className={`p-3 rounded-xl text-xs ${
-                      msg.role === 'user'
-                        ? 'bg-[var(--rose-surface-card)] border border-[var(--rose-border)] text-[var(--rose-text)]'
-                        : 'bg-[#EA580C]/10 border border-[#EA580C]/20 text-[var(--rose-text)]'
+                    className={`rounded-2xl p-4 border space-y-3 shadow-sm ${
+                      isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 mb-1 font-semibold text-[11px]">
-                      {msg.role === 'user' ? (
-                        <span className="text-[var(--rose-text-muted)]">Prompt</span>
-                      ) : (
-                        <span className="text-[#EA580C] flex items-center gap-1">
-                          <Sparkles className="w-3 h-3" /> Forge
+                    <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-[#EA580C]" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-neutral-300">
+                          {isBuilding ? 'Build In Progress' : 'Build Specification'}
                         </span>
-                      )}
+                      </div>
+                      <span
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          isBuilding
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse'
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        }`}
+                      >
+                        {isBuilding ? 'Ticking...' : 'Compiled'}
+                      </span>
                     </div>
-                    <p className="leading-relaxed line-clamp-3">
-                      {msg.role === 'user'
-                        ? msg.content
-                        : project
-                        ? `Compiled "${project.title}" (${project.files.length} file)`
-                        : 'Generated code bundle'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
 
-            {/* In-Progress Building Banner */}
-            {isBuilding && (
-              <div className="p-3.5 rounded-2xl bg-[#EA580C]/10 border border-[#EA580C]/30 flex items-center gap-2.5 text-xs text-[#EA580C] animate-pulse">
-                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                <span className="font-semibold">Forge is crafting your code and rendering live...</span>
+                    {/* Step list matching Image 1: Thinking, Writing structure, Styling, Adding interactivity, Done */}
+                    <div className="space-y-2 text-xs">
+                      <div
+                        className={`flex items-center gap-2 transition-colors ${
+                          stepProgress.step1 ? 'text-emerald-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        {stepProgress.step1 ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
+                        )}
+                        <span className={stepProgress.step1 ? 'text-neutral-200' : 'text-neutral-500'}>
+                          Thinking & understanding requirements
+                        </span>
+                      </div>
+
+                      <div
+                        className={`flex items-center gap-2 transition-colors ${
+                          stepProgress.step2 ? 'text-emerald-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        {stepProgress.step2 ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        ) : isBuilding && stepProgress.step1 ? (
+                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
+                        )}
+                        <span className={stepProgress.step2 ? 'text-neutral-200' : 'text-neutral-500'}>
+                          Writing semantic structure (HTML5)
+                        </span>
+                      </div>
+
+                      <div
+                        className={`flex items-center gap-2 transition-colors ${
+                          stepProgress.step3 ? 'text-emerald-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        {stepProgress.step3 ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        ) : isBuilding && stepProgress.step2 ? (
+                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
+                        )}
+                        <span className={stepProgress.step3 ? 'text-neutral-200' : 'text-neutral-500'}>
+                          Styling (Tailwind CSS & design tokens)
+                        </span>
+                      </div>
+
+                      <div
+                        className={`flex items-center gap-2 transition-colors ${
+                          stepProgress.step4 ? 'text-emerald-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        {stepProgress.step4 ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        ) : isBuilding && stepProgress.step3 ? (
+                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
+                        )}
+                        <span className={stepProgress.step4 ? 'text-neutral-200' : 'text-neutral-500'}>
+                          Adding interactivity & state handlers (JavaScript)
+                        </span>
+                      </div>
+
+                      <div
+                        className={`flex items-center gap-2 transition-colors ${
+                          stepProgress.step5 ? 'text-emerald-400' : 'text-neutral-500'
+                        }`}
+                      >
+                        {stepProgress.step5 ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
+                        )}
+                        <span className={stepProgress.step5 ? 'text-neutral-200 font-semibold' : 'text-neutral-500'}>
+                          Done & live sandbox mounted
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Editorial Prompt Starters (Image 1 Layout) */}
+                <div className="space-y-2 pt-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block">
+                    Quick Website Starters
+                  </span>
+                  {suggestionCards.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleCardClick(suggestion)}
+                      disabled={isBuilding}
+                      className={`w-full text-left p-3.5 rounded-2xl border text-xs sm:text-[13px] font-medium transition-all shadow-2xs group cursor-pointer disabled:opacity-50 ${
+                        isDarkMode
+                          ? 'bg-[#080808] border-[#171717] hover:border-[#EA580C]/70 text-neutral-200 hover:text-white'
+                          : 'bg-white border-gray-200 hover:border-[#EA580C]/70 text-gray-800'
+                      }`}
+                    >
+                      <span className="block truncate">{suggestion}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Project Iteration History */}
+                {websiteMessages.length > 0 && (
+                  <div className="space-y-3 pt-3 border-t border-neutral-800">
+                    <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block">
+                      Build History
+                    </span>
+                    {websiteMessages.slice(-5).map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`p-3 rounded-xl text-xs border space-y-2 ${
+                          msg.role === 'user'
+                            ? isDarkMode
+                              ? 'bg-[#080808] border-[#171717] text-neutral-300'
+                              : 'bg-gray-50 border-gray-200 text-gray-800'
+                            : 'bg-[#EA580C]/10 border-[#EA580C]/20 text-neutral-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+                          {msg.role === 'user' ? (
+                            <span className="text-neutral-400">Prompt</span>
+                          ) : (
+                            <span className="text-[#EA580C] flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" /> Forge {msg.isPatchEdit ? 'Patch' : 'Build'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Collapsible Action Tree if available */}
+                        {msg.role === 'assistant' && (msg.thought || (msg.actionSteps && msg.actionSteps.length > 0)) && (
+                          <AgentActionTree
+                            steps={msg.actionSteps}
+                            thought={msg.thought}
+                            thoughtDuration={msg.thoughtDuration}
+                          />
+                        )}
+
+                        <p className="leading-relaxed line-clamp-3">
+                          {msg.role === 'user'
+                            ? msg.content
+                            : msg.content
+                            ? msg.content.replace(/```[\s\S]*?```/g, '').trim()
+                            : project
+                            ? `Compiled "${project.title}" (${project.files.length} file)`
+                            : 'Generated code bundle'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Details Tab (Image 1 Feature) */
+              <div className="space-y-4 text-xs text-neutral-300">
+                <div
+                  className={`p-4 rounded-2xl border space-y-3 ${
+                    isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <h3 className="font-semibold text-sm text-neutral-100 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#EA580C]" />
+                    <span>Project Architecture</span>
+                  </h3>
+                  <div className="space-y-1.5 text-neutral-400">
+                    <p>• <strong>Stack</strong>: HTML5, Tailwind CSS, Vanilla JavaScript</p>
+                    <p>• <strong>Runtime</strong>: Sandboxed Client-Side Iframe</p>
+                    <p>• <strong>Theme</strong>: Pure Black (#000000) & White (#FFFFFF)</p>
+                    <p>• <strong>Status</strong>: {project ? 'Live & Interactive' : 'Awaiting prompt'}</p>
+                  </div>
+                </div>
+
+                <div
+                  className={`p-4 rounded-2xl border space-y-2 text-neutral-400 leading-relaxed ${
+                    isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <p className="font-semibold text-neutral-200">How Forge Works:</p>
+                  <p>1. Type any app idea (e.g. &ldquo;pomodoro timer&rdquo; or &ldquo;snake game&rdquo;).</p>
+                  <p>2. The AI writes clean, self-contained code without bloating chat.</p>
+                  <p>3. The live preview updates automatically in real-time.</p>
+                  <p>4. Export standalone .html anytime with one click.</p>
+                </div>
               </div>
             )}
 
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Bottom Prompt Card (Matches Screenshot!) */}
-          <div className="p-4 border-t border-[var(--rose-border)] bg-[var(--rose-background)]">
-            <form onSubmit={handleSubmit} className="relative rounded-2xl bg-[var(--rose-surface-card)] border border-[var(--rose-border)] focus-within:border-[#EA580C] transition-all p-3 shadow-sm">
+          {/* Bottom Floating Prompt Card (Exact Lovable / Forge Input Dock) */}
+          <div
+            className={`p-4 border-t ${
+              isDarkMode ? 'border-[#171717] bg-black' : 'border-gray-200 bg-white'
+            }`}
+          >
+            <form
+              onSubmit={handleSubmit}
+              className={`relative rounded-2xl border focus-within:border-[#EA580C] transition-all p-3 shadow-sm ${
+                isDarkMode ? 'bg-[#080808] border-[#222222]' : 'bg-gray-50 border-gray-300'
+              }`}
+            >
               <textarea
                 ref={textareaRef}
                 rows={2}
@@ -313,10 +674,10 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Ask Forge to build..."
                 disabled={isBuilding}
-                className="w-full resize-none bg-transparent text-xs sm:text-sm text-[var(--rose-text)] placeholder:text-[var(--rose-text-muted)] focus:outline-none leading-relaxed pr-16"
+                className="w-full resize-none bg-transparent text-xs sm:text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none leading-relaxed pr-16"
               />
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[10px] text-[var(--rose-text-muted)]">
+                <span className="text-[10px] text-neutral-500">
                   Shift+Enter for newline
                 </span>
                 <button
@@ -327,9 +688,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                   {isBuilding ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <>
-                      <span>Send</span>
-                    </>
+                    <span>Send</span>
                   )}
                 </button>
               </div>
@@ -338,15 +697,20 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
         </div>
 
         {/* ======================================================== */}
-        {/* RIGHT COLUMN: Live Canvas & Code Inspector (Desktop & Mobile Preview Tab) */}
+        {/* RIGHT COLUMN: Canvas Live Preview & Code View (Desktop & Mobile Preview Tab) */}
         {/* ======================================================== */}
         <div
           className={`flex-1 flex flex-col h-full overflow-hidden relative ${
             mobileTab === 'preview' ? 'w-full flex' : 'hidden md:flex'
-          } bg-[var(--rose-background)] p-3 md:p-5`}
+          } p-3 md:p-4`}
+          style={{ backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }}
         >
-          {/* Main Rounded Canvas Area */}
-          <div className="flex-1 w-full h-full rounded-2xl md:rounded-3xl border border-[var(--rose-border)] bg-[#050505] relative overflow-hidden flex flex-col shadow-inner">
+          {/* Main Rounded Canvas Area (Pure Black OLED Container) */}
+          <div
+            className={`flex-1 w-full h-full rounded-2xl md:rounded-3xl border relative overflow-hidden flex flex-col shadow-inner ${
+              isDarkMode ? 'border-[#171717] bg-[#050505]' : 'border-gray-200 bg-gray-100'
+            }`}
+          >
             {project ? (
               viewTab === 'preview' ? (
                 /* Live Interactive Sandboxed Iframe */
@@ -360,8 +724,8 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 />
               ) : (
                 /* Syntax-Highlighted Code Viewer */
-                <div className="flex-1 flex flex-col h-full bg-[#0A0A0A] text-neutral-100 font-mono text-xs overflow-hidden">
-                  <div className="flex items-center justify-between px-4 py-2 bg-neutral-900 border-b border-neutral-800 shrink-0">
+                <div className="flex-1 flex flex-col h-full bg-[#050505] text-neutral-100 font-mono text-xs overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2 bg-neutral-900/80 border-b border-neutral-800 shrink-0">
                     <span className="text-neutral-400 font-medium">index.html</span>
                     <div className="flex items-center gap-2">
                       <button
@@ -386,20 +750,39 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 </div>
               )
             ) : (
-              /* Centered Empty State (Exact Match to Screenshot!) */
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-2">
-                <span className="font-serif text-sm sm:text-base text-neutral-500">
+              /* Centered Empty State (Exact Match to Image 1!) */
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
+                <div className="space-y-1">
+                  <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-neutral-200">
+                    What should we build today?
+                  </h2>
+                  <p className="text-xs sm:text-sm text-neutral-500 max-w-sm mx-auto">
+                    Describe a page, game or tool. Forge writes the code and runs it live.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg w-full pt-2">
+                  {suggestionCards.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleCardClick(suggestion)}
+                      disabled={isBuilding}
+                      className="text-left p-3 rounded-xl bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#EA580C]/60 text-xs text-neutral-300 hover:text-white transition-all cursor-pointer shadow-2xs"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+
+                <span className="font-serif text-sm text-neutral-600 pt-6">
                   Your page will appear here
                 </span>
-                <p className="text-[11px] text-neutral-600 max-w-xs">
-                  Select a starter on the left or type any website idea into the prompt box.
-                </p>
               </div>
             )}
 
-            {/* Floating Action Dock (Exact Match to Screenshot!) */}
+            {/* Floating Action Dock (Exact Match to Image 1 & 2!) */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
-              <div className="bg-neutral-900/90 backdrop-blur-md text-neutral-300 border border-neutral-700/80 rounded-full px-3.5 py-1.5 flex items-center gap-3.5 shadow-2xl">
+              <div className="bg-[#111111]/90 backdrop-blur-md text-neutral-300 border border-[#2a2a2a] rounded-full px-3.5 py-1.5 flex items-center gap-3.5 shadow-2xl">
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
                   className="p-1 hover:text-white transition-colors cursor-pointer"
@@ -410,7 +793,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 <button
                   onClick={() => setFontSerifMode(!fontSerifMode)}
                   className="p-1 hover:text-white transition-colors cursor-pointer"
-                  title="Toggle Serif/Sans UI font"
+                  title="Toggle Serif/Sans font"
                 >
                   <Type className="w-3.5 h-3.5" />
                 </button>
@@ -456,31 +839,39 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
       </div>
 
       {/* ======================================================== */}
-      {/* MOBILE BOTTOM NAVIGATION BAR (Exact Match to Image 2!) */}
+      {/* MOBILE BOTTOM NAVIGATION BAR (Exact Match to Image 1 & 2!) */}
       {/* ======================================================== */}
-      <div className="md:hidden h-14 border-t border-[var(--rose-border)] bg-[var(--rose-background)] px-6 flex items-center justify-between shrink-0 z-30">
+      <div
+        className={`md:hidden h-14 border-t px-6 flex items-center justify-between shrink-0 z-30 ${
+          isDarkMode ? 'border-[#171717] bg-black' : 'border-gray-200 bg-white'
+        }`}
+      >
         {/* Left: Chat Tab */}
         <button
           onClick={() => setMobileTab('chat')}
           className={`flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors ${
-            mobileTab === 'chat' ? 'text-[#EA580C]' : 'text-[var(--rose-text-muted)]'
+            mobileTab === 'chat' ? 'text-[#EA580C]' : 'text-neutral-400'
           }`}
         >
           <span>Chat</span>
         </button>
 
         {/* Center: Action Dock Pill Icons */}
-        <div className="bg-[var(--rose-surface-card)] border border-[var(--rose-border)] rounded-full px-3 py-1 flex items-center gap-3">
+        <div
+          className={`border rounded-full px-3 py-1 flex items-center gap-3 ${
+            isDarkMode ? 'bg-[#111111] border-[#222222]' : 'bg-gray-100 border-gray-300'
+          }`}
+        >
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] transition-colors cursor-pointer"
+            className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             title="Expand"
           >
             <Maximize2 className="w-3 h-3" />
           </button>
           <button
             onClick={() => setFontSerifMode(!fontSerifMode)}
-            className="p-1 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] transition-colors cursor-pointer"
+            className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             title="Font"
           >
             <Type className="w-3 h-3" />
@@ -490,7 +881,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
               setViewTab(viewTab === 'preview' ? 'code' : 'preview');
               setMobileTab('preview');
             }}
-            className="p-1 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] transition-colors cursor-pointer"
+            className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             title="Code / Preview"
           >
             <PenTool className="w-3 h-3" />
@@ -500,7 +891,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
               setMobileTab('chat');
               textareaRef.current?.focus();
             }}
-            className="p-1 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] transition-colors cursor-pointer"
+            className="p-1 text-neutral-400 hover:text-white transition-colors cursor-pointer"
             title="Chat"
           >
             <MessageSquare className="w-3 h-3" />
@@ -511,7 +902,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
         <button
           onClick={() => setMobileTab('preview')}
           className={`flex items-center gap-1.5 text-xs font-semibold cursor-pointer transition-colors ${
-            mobileTab === 'preview' ? 'text-[#EA580C]' : 'text-[var(--rose-text-muted)]'
+            mobileTab === 'preview' ? 'text-[#EA580C]' : 'text-neutral-400'
           }`}
         >
           <span>Preview</span>

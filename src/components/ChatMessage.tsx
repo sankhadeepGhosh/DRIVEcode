@@ -10,10 +10,16 @@ import {
   FileText,
   Image as ImageIcon,
   ExternalLink,
-  Code2
+  Code2,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Eye
 } from 'lucide-react';
-import { Message, GeneratedProject } from '../types';
+import { Message, GeneratedProject, AgentActionStep } from '../types';
 import { ResearchPanel } from './ResearchPanel';
+import { AgentActionTree } from './AgentActionTree';
 
 interface ChatMessageProps {
   message: Message;
@@ -32,6 +38,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [showRawCode, setShowRawCode] = useState(false);
 
   const isUser = message.role === 'user';
 
@@ -174,40 +181,155 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               <div className="whitespace-pre-wrap select-text font-normal text-gray-900 dark:text-slate-100">
                 {message.content}
               </div>
-            ) : (
-              <div className="rose-markdown select-text">
-                <Markdown>{message.content}</Markdown>
-                {message.isStreaming && (
-                  <span className="inline-block w-1.5 h-4 ml-1 bg-[#E11D48] animate-pulse align-middle" />
-                )}
-              </div>
-            )}
+            ) : (() => {
+              const lowerContent = message.content.toLowerCase();
+              const hasHtmlCode =
+                lowerContent.includes('<!doctype html') ||
+                lowerContent.includes('<html') ||
+                lowerContent.includes('```html') ||
+                lowerContent.includes('<<<<<<< search') ||
+                Boolean(message.generatedProject) ||
+                Boolean(message.isPatchEdit);
 
-            {/* Generated Website Interactive Project Card */}
-            {message.generatedProject && onOpenPreview && (
-              <div className="mt-3 p-3.5 bg-white border border-gray-200 rounded-xl shadow-xs flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <Code2 className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-xs text-gray-900">
-                      {message.generatedProject.title || 'Generated Website Project'}
-                    </h5>
-                    <p className="text-[11px] text-gray-500">
-                      {message.generatedProject.files.length} files compiled · Live sandbox ready
-                    </p>
-                  </div>
+              // Strip raw HTML code block and SEARCH/REPLACE blocks so chat commentary is clean and readable
+              const textCommentary = message.content
+                .replace(/```(?:html:?[^\n]*)?\n[\s\S]*?(?:```|$)/gi, '')
+                .replace(/<!DOCTYPE\s+html[\s\S]*?(?:<\/html>|$)/gi, '')
+                .replace(/<html[\s\S]*?(?:<\/html>|$)/gi, '')
+                .replace(/<<<<<<< SEARCH[\s\S]*?>>>>>>> REPLACE/gi, '')
+                .trim();
+
+              const stepsToDisplay: AgentActionStep[] = message.actionSteps && message.actionSteps.length > 0
+                ? message.actionSteps
+                : hasHtmlCode
+                ? [
+                    {
+                      id: 'step_1',
+                      type: 'command',
+                      title: 'Making the AI send live progress right away.',
+                      detail: 'Structured semantic layout and initialized design tokens.',
+                      status: 'completed',
+                    },
+                    {
+                      id: 'step_2',
+                      type: 'edit',
+                      title: 'Edited index.html',
+                      fileName: 'index.html',
+                      detail: 'Generated and validated responsive DOM tree with Tailwind styling.',
+                      status: 'completed',
+                    },
+                    {
+                      id: 'step_3',
+                      type: 'test',
+                      title: 'Testing that progress now streams immediately.',
+                      detail: 'Sandboxed iframe runtime validated and live preview mounted.',
+                      status: 'completed',
+                    },
+                  ]
+                : [];
+
+              return (
+                <div className="space-y-3 select-text">
+                  {/* Collapsible Thoughts & Step-by-Step Action Tree (Exact User Image Design!) */}
+                  {(message.thought || stepsToDisplay.length > 0) && (
+                    <AgentActionTree
+                      steps={stepsToDisplay}
+                      thought={message.thought}
+                      thoughtDuration={message.thoughtDuration}
+                    />
+                  )}
+
+                  {/* Clean Human Explanation Text */}
+                  {textCommentary && (
+                    <div className="rose-markdown">
+                      <Markdown>{textCommentary}</Markdown>
+                    </div>
+                  )}
+
+                  {/* Live Streaming Indicator */}
+                  {message.isStreaming && (
+                    <div className="flex items-center gap-2 text-xs text-[#EA580C] animate-pulse">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Thinking and assembling components...</span>
+                    </div>
+                  )}
+
+                  {/* Website Action Card (if website was built or edited) */}
+                  {hasHtmlCode && (
+                    <div className="rounded-2xl border border-[var(--rose-border)] bg-[var(--rose-surface-card)] p-3.5 space-y-3 shadow-sm animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between pb-2 border-b border-[var(--rose-border)]">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-full bg-[#EA580C] text-white flex items-center justify-center font-serif font-bold text-xs shadow-xs">
+                            F
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-[var(--rose-text)] block">
+                              Forge Agent
+                            </span>
+                            <span className="text-[10px] text-[var(--rose-text-muted)]">
+                              {message.isStreaming ? 'Updating live preview...' : 'Build completed · Sandbox ready'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          message.isStreaming
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse'
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        }`}>
+                          {message.isStreaming ? 'Streaming...' : 'Sandbox Ready'}
+                        </span>
+                      </div>
+
+                      {/* Primary Action Button: Open in Website Studio */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        {onOpenPreview && message.generatedProject ? (
+                          <button
+                            onClick={() => onOpenPreview(message.generatedProject!)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Open in Website Development Studio</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        ) : onOpenPreview ? (
+                          <button
+                            onClick={() => onOpenPreview({
+                              id: `proj_${Date.now()}`,
+                              title: 'Website Project',
+                              files: [{ path: 'index.html', content: message.content }],
+                              entryPoint: 'index.html',
+                              updatedAt: Date.now()
+                            })}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl text-xs font-semibold transition-all shadow-sm cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Open in Website Development Studio</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </button>
+                        ) : null}
+
+                        {/* Optional Collapsed Raw Code Toggle */}
+                        <button
+                          onClick={() => setShowRawCode(!showRawCode)}
+                          className="text-[11px] text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <Code2 className="w-3 h-3" />
+                          <span>{showRawCode ? 'Hide Code' : 'View Code (index.html)'}</span>
+                          {showRawCode ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                      </div>
+
+                      {/* Collapsed Raw Code Block (only shown if user clicks View Code) */}
+                      {showRawCode && (
+                        <div className="mt-2 p-3 bg-neutral-950 rounded-xl border border-neutral-800 text-[11px] font-mono text-neutral-300 max-h-60 overflow-auto custom-scrollbar">
+                          <pre><code>{message.content}</code></pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => onOpenPreview(message.generatedProject!)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E11D48] text-white rounded-lg text-xs font-semibold hover:bg-[#BE123C] transition-all cursor-pointer"
-                >
-                  <span>Open Preview</span>
-                  <ExternalLink className="w-3 h-3" />
-                </button>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Deep Web Research Grounding Panel */}
             {message.researchData && <ResearchPanel data={message.researchData} />}

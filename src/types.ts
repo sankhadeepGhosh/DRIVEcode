@@ -64,6 +64,23 @@ export interface MessageAttachment {
   textContent?: string; // for parsed text/code
 }
 
+export interface ActionDiff {
+  search: string;
+  replace: string;
+}
+
+export interface AgentActionStep {
+  id: string;
+  type: 'thought' | 'command' | 'edit' | 'test' | 'read' | 'info';
+  title: string;
+  durationSeconds?: number;
+  detail?: string;
+  fileName?: string;
+  diff?: ActionDiff;
+  thumbnailUrl?: string;
+  status?: 'pending' | 'running' | 'completed' | 'failed';
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -78,6 +95,10 @@ export interface Message {
   attachments?: MessageAttachment[];
   researchData?: ResearchData;
   generatedProject?: GeneratedProject;
+  thought?: string;
+  thoughtDuration?: number;
+  actionSteps?: AgentActionStep[];
+  isPatchEdit?: boolean;
 }
 
 export interface Conversation {

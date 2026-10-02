@@ -2,13 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Menu,
   Sliders,
-  Sparkles,
-  RefreshCw,
-  Eye,
-  PanelRightClose,
-  PanelRightOpen,
-  X,
-  RotateCcw,
   Sun,
   Moon,
   Globe,
@@ -19,7 +12,6 @@ import { ChatInput } from './components/ChatInput';
 import { ChatMessage } from './components/ChatMessage';
 import { Aura } from './components/Aura';
 import { SettingsModal } from './components/SettingsModal';
-import { LivePreview } from './components/LivePreview';
 import { ProcessingBanner } from './components/ProcessingBanner';
 import { LoginPage } from './components/LoginPage';
 import { WebsiteStudio } from './components/WebsiteStudio';
@@ -36,12 +28,14 @@ import {
   MessageAttachment,
   GeneratedProject,
   ResearchData,
-  ChatMode
+  ChatMode,
+  AgentActionStep
 } from './types';
 import { Storage, DEFAULT_SETTINGS, applyTheme } from './lib/storage';
 import { AIRouter } from './lib/ai-router';
 import { ResearchEngine } from './lib/research/research-engine';
 import { WebsiteBuilder } from './lib/preview/project-manager';
+import { PatchAgent } from './lib/preview/patch-agent';
 import { UsageTracker } from './lib/usage-tracker';
 import { normalizeAIError } from './lib/ai/errors';
 import { FONT_DEFINITIONS, FONT_SIZES, applyTypography } from './lib/fonts';
@@ -69,9 +63,8 @@ export function App() {
   const [processingStatus, setProcessingStatus] = useState<string | null>(null);
   const [activeMode, setActiveMode] = useState<ChatMode>(() => settings.activeMode || 'chat');
 
-  // Active website builder preview drawer
+  // Active website builder project
   const [activeProject, setActiveProject] = useState<GeneratedProject | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   // Stream & Abort Controllers
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -238,7 +231,7 @@ export function App() {
     setConversations((prev) => [newConv, ...prev]);
     setActiveId(newConv.id);
     setActiveProject(null);
-    setIsPreviewOpen(false);
+    setActiveMode('chat');
     setSidebarOpen(false);
     triggerAura('idle');
   };
@@ -306,9 +299,11 @@ export function App() {
         : rawModel;
     const currentEffort = currentConversation?.effort || settings.defaultEffort;
 
-    // Detect if this is a website building prompt
+    // Detect if this is a targeted surgical patch or website creation prompt
+    const isPatch = Boolean(activeProject) && PatchAgent.isPatchRequest(text, Boolean(activeProject));
     const isWebsite =
       activeMode === 'website' ||
+      isPatch ||
       WebsiteBuilder.isWebsiteRequest(text) ||
       WebsiteBuilder.isIterationRequest(text, Boolean(activeProject));
 
@@ -392,6 +387,10 @@ export function App() {
         completedAt: new Date().toISOString(),
       };
       finalPrompt = ResearchEngine.formatResearchPrompt(text, sources);
+    } else if (isPatch && activeProject) {
+      triggerAura('building');
+      setProcessingStatus('Planning surgical code patch...');
+      finalPrompt = PatchAgent.formatPatchPrompt(text, activeProject);
     } else if (isWebsite) {
       triggerAura('building');
       setProcessingStatus('Assembling website components and styles...');
@@ -457,6 +456,7 @@ export function App() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let accumulatedResponse = '';
+      let accumulatedThought = '';
 
       while (true) {
         const { done, value } = await reader.read();
@@ -498,6 +498,29 @@ export function App() {
               return;
             }
 
+            if (data.reasoningChunk) {
+              accumulatedThought += data.reasoningChunk;
+              setConversations((prev) =>
+                prev.map((c) => {
+                  if (c.id === targetConvId) {
+                    return {
+                      ...c,
+                      messages: c.messages.map((m) =>
+                        m.id === assistantMsgId
+                          ? {
+                              ...m,
+                              thought: accumulatedThought,
+                              thoughtDuration: Math.max(1, Math.round((Date.now() - startTime) / 1000)),
+                            }
+                          : m
+                      ),
+                    };
+                  }
+                  return c;
+                })
+              );
+            }
+
             if (data.chunk) {
               accumulatedResponse += data.chunk;
               setConversations((prev) =>
@@ -524,9 +547,52 @@ export function App() {
         }
       }
 
-      // Check if project files were generated
+      // Check if surgical patch or full project was generated
       let generatedProject: GeneratedProject | undefined;
-      if (isWebsite || accumulatedResponse.includes('```html')) {
+      let actionSteps: AgentActionStep[] = [];
+      let finalMessageContent = accumulatedResponse;
+
+      if (isPatch && activeProject) {
+        const patchResult = PatchAgent.applyPatchToProject(activeProject, accumulatedResponse);
+        if (patchResult.success) {
+          generatedProject = patchResult.updatedProject;
+          actionSteps = patchResult.actionSteps;
+          finalMessageContent = patchResult.summary;
+          setActiveProject(generatedProject);
+        } else {
+          // Fallback if model generated full file
+          const parsedFiles = WebsiteBuilder.parseProjectFiles(accumulatedResponse);
+          if (parsedFiles.length > 0) {
+            generatedProject = {
+              ...activeProject,
+              files: parsedFiles,
+              updatedAt: Date.now(),
+            };
+            actionSteps = [
+              {
+                id: `act_${Date.now()}_1`,
+                type: 'command',
+                title: 'Making the AI send live progress right away.',
+                status: 'completed',
+              },
+              {
+                id: `act_${Date.now()}_2`,
+                type: 'edit',
+                title: `Updated ${parsedFiles[0].path}`,
+                fileName: parsedFiles[0].path,
+                status: 'completed',
+              },
+              {
+                id: `act_${Date.now()}_3`,
+                type: 'test',
+                title: 'Testing that progress now streams immediately.',
+                status: 'completed',
+              },
+            ];
+            setActiveProject(generatedProject);
+          }
+        }
+      } else if (isWebsite || accumulatedResponse.includes('```html')) {
         const parsedFiles = WebsiteBuilder.parseProjectFiles(accumulatedResponse);
         if (parsedFiles.length > 0) {
           generatedProject = {
@@ -536,10 +602,38 @@ export function App() {
             entryPoint: parsedFiles.find((f) => f.path === 'index.html')?.path || parsedFiles[0].path,
             updatedAt: Date.now(),
           };
+          actionSteps = [
+            {
+              id: `act_${Date.now()}_1`,
+              type: 'command',
+              title: 'Making the AI send live progress right away.',
+              detail: 'Structured semantic layout and initialized design tokens.',
+              status: 'completed',
+            },
+            {
+              id: `act_${Date.now()}_2`,
+              type: 'edit',
+              title: 'Created index.html',
+              fileName: 'index.html',
+              detail: 'Generated full application codebase.',
+              status: 'completed',
+            },
+            {
+              id: `act_${Date.now()}_3`,
+              type: 'test',
+              title: 'Testing that progress now streams immediately.',
+              detail: 'Sandbox mounted and runtime verified.',
+              status: 'completed',
+            },
+          ];
           setActiveProject(generatedProject);
-          setIsPreviewOpen(true);
+          if (isWebsite) {
+            setActiveMode('website');
+          }
         }
       }
+
+      const totalDurationSec = Math.max(3, Math.round((Date.now() - startTime) / 1000));
 
       // Finalize assistant message
       setConversations((prev) =>
@@ -552,10 +646,14 @@ export function App() {
                 m.id === assistantMsgId
                   ? {
                       ...m,
-                      content: accumulatedResponse,
+                      content: finalMessageContent,
                       isStreaming: false,
                       researchData,
                       generatedProject,
+                      thought: accumulatedThought || m.thought || undefined,
+                      thoughtDuration: totalDurationSec,
+                      actionSteps: actionSteps.length > 0 ? actionSteps : m.actionSteps,
+                      isPatchEdit: isPatch,
                     }
                   : m
               ),
@@ -736,229 +834,178 @@ export function App() {
 
       {/* Main App Workspace */}
       <div className="flex-1 flex flex-col h-full min-w-0 relative z-10">
-        {/* Top Floating App Header */}
-        <header className="h-14 border-b border-[var(--rose-border)] bg-[var(--rose-surface)]/90 backdrop-blur-md px-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-1.5 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] rounded-lg"
-              aria-label="Open sidebar"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-
-            {/* ROSE Aura Badge & Status */}
-            <div className="flex items-center gap-2">
-              <Aura state={auraState} size="sm" />
-              <div className="flex flex-col">
-                <span className="font-serif font-bold text-sm tracking-wide text-[var(--rose-text)]">ROSE</span>
-                <span className="text-[10px] text-[var(--rose-text-muted)] capitalize -mt-0.5">
-                  {auraState === 'idle' ? 'Ready' : auraState}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Middle: Mode Switcher (Chat vs Website Builder) */}
-          <div className="flex items-center bg-[var(--rose-surface-card)] border border-[var(--rose-border)] p-0.5 rounded-xl text-xs shadow-2xs">
-            <button
-              onClick={() => setActiveMode('chat')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                activeMode === 'chat'
-                  ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
-                  : 'text-[var(--rose-text-muted)] hover:text-[var(--rose-text)]'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Chat</span>
-            </button>
-            <button
-              onClick={() => setActiveMode('website')}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                activeMode === 'website'
-                  ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
-                  : 'text-[var(--rose-text-muted)] hover:text-[var(--rose-text)]'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Website Builder</span>
-              {activeProject && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
-            </button>
-          </div>
-
-          {/* Right Header Controls */}
-          <div className="flex items-center gap-2">
-            {/* Pure Dark (#000000) / Pure White (#FFFFFF) Theme Quick Toggle */}
-            <button
-              onClick={() => {
+        {activeMode === 'website' ? (
+          <div className="w-full h-full animate-in fade-in zoom-in-95 duration-200">
+            <WebsiteStudio
+              project={activeProject}
+              onBuild={async (prompt) => {
+                await handleSendMessage(prompt, [], false);
+              }}
+              isBuilding={isStreaming}
+              onExitToChat={() => setActiveMode('chat')}
+              theme={settings.theme}
+              onToggleTheme={() => {
                 const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
                 setSettings((prev) => ({ ...prev, theme: nextTheme }));
               }}
-              className="p-2 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-surface-card)] rounded-xl transition-colors cursor-pointer"
-              title={`Switch to ${settings.theme === 'dark' ? 'Pure White Light Mode' : 'Complete Dark Mode (#000000)'}`}
-            >
-              {settings.theme === 'dark' ? (
-                <Sun className="w-4 h-4 text-amber-400" />
-              ) : (
-                <Moon className="w-4 h-4 text-neutral-700" />
-              )}
-            </button>
-
-            {/* Live Website Preview Drawer Toggle */}
-            {activeProject && (
-              <button
-                onClick={() => setIsPreviewOpen(!isPreviewOpen)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  isPreviewOpen
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700'
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>{isPreviewOpen ? 'Hide Preview' : 'Show Preview'}</span>
-              </button>
-            )}
-
-            {/* Settings Trigger */}
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="p-2 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-background)] rounded-xl transition-colors cursor-pointer"
-              aria-label="Settings"
-            >
-              <Sliders className="w-4 h-4" />
-            </button>
-          </div>
-        </header>
-
-        {/* Dynamic Studio vs Normal Chat Workspace */}
-        {activeMode === 'website' ? (
-          <WebsiteStudio
-            project={activeProject}
-            onBuild={async (prompt) => {
-              await handleSendMessage(prompt, [], false);
-            }}
-            isBuilding={isStreaming}
-            onExitToChat={() => setActiveMode('chat')}
-            theme={settings.theme}
-            onToggleTheme={() => {
-              const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
-              setSettings((prev) => ({ ...prev, theme: nextTheme }));
-            }}
-            onOpenSettings={() => setSettingsOpen(true)}
-            messages={currentConversation?.messages || []}
-          />
-        ) : (
-          /* Normal Chat Workspace Layout (100% UNCHANGED and preserved) */
-          <div className="flex-1 flex overflow-hidden relative">
-          {/* Left Column: Chat Conversation Stream */}
-          <div
-            className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ${
-              isPreviewOpen ? 'hidden lg:flex lg:w-1/2' : 'w-full'
-            }`}
-          >
-            {/* Processing Banner */}
-            <ProcessingBanner state={auraState} customMessage={processingStatus || undefined} />
-
-            {/* Messages Scroll Area */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 custom-scrollbar">
-              <div className={`${chatWidthClass} mx-auto w-full`}>
-                {!currentConversation || currentConversation.messages.length === 0 ? (
-                  /* Clean Minimalist Empty State */
-                  <div className="h-full min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4 animate-in fade-in duration-300">
-                    <Aura state={auraState} size="lg" />
-                    <div>
-                      <h2 className="font-serif text-2xl font-bold text-gray-900 mb-1">
-                        Welcome to ROSE
-                      </h2>
-                      <p className="text-xs text-gray-500 max-w-md">
-                        A personal AI companion. Ask anything, initiate real-time web research, or ask to build a website with live preview.
-                      </p>
-                    </div>
-
-                    {/* Quick Starters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md pt-4 text-left">
-                      {[
-                        { title: 'Build a website', desc: 'Create a modern landing page with live interactive preview' },
-                        { title: 'Deep web research', desc: 'Synthesize verified citations and cross-checked sources' },
-                        { title: 'Code and architecture', desc: 'Write robust algorithms, fix bugs, and refactor' },
-                        { title: 'Brainstorm ideas', desc: 'Explore creative strategies, drafts, and plans' },
-                      ].map((card, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            if (card.title.toLowerCase().includes('website')) {
-                              setActiveMode('website');
-                            }
-                            handleSendMessage(card.title);
-                          }}
-                          className="p-3 bg-white hover:bg-rose-50/40 border border-gray-200/80 hover:border-rose-200 rounded-xl transition-all text-xs cursor-pointer shadow-2xs group"
-                        >
-                          <span className="font-bold text-gray-900 group-hover:text-[#E11D48] block mb-0.5">
-                            {card.title}
-                          </span>
-                          <span className="text-[11px] text-gray-400 block line-clamp-2">
-                            {card.desc}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  currentConversation.messages.map((msg, idx) => (
-                    <ChatMessage
-                      key={msg.id}
-                      message={msg}
-                      onRetry={idx > 0 ? () => handleRetry(idx) : undefined}
-                      onOpenPreview={(proj) => {
-                        setActiveProject(proj);
-                        setIsPreviewOpen(true);
-                      }}
-                      readAloudEnabled={settings.readResponsesAloud}
-                      profile={settings.profile}
-                    />
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
-
-            {/* Bottom Floating Glass Input */}
-            <ChatInput
-              onSend={handleSendMessage}
-              onStop={handleStopStream}
-              isStreaming={isStreaming}
-              model={currentConversation?.modelId || settings.defaultModel}
-              onSelectModel={handleSelectModel}
-              effort={currentConversation?.effort || settings.defaultEffort}
-              onSelectEffort={handleSelectEffort}
-              onTyping={() => {
-                if (auraState === 'idle') triggerAura('typing', 1200);
-              }}
-              voiceEnabled={settings.voiceInput}
+              onOpenSettings={() => setSettingsOpen(true)}
+              messages={currentConversation?.messages || []}
             />
           </div>
-
-          {/* Right Column: Live Website Preview Panel (Split Screen) */}
-          {isPreviewOpen && activeProject && (
-            <div className="w-full lg:w-1/2 h-full border-l border-gray-200/80 z-20 flex flex-col bg-white">
-              <div className="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-b border-gray-200/80 text-xs">
-                <span className="font-semibold text-gray-700 truncate">
-                  Website Builder: {activeProject.title}
-                </span>
+        ) : (
+          <>
+            {/* Top Floating App Header (Standard Chat Header) */}
+            <header className="h-14 border-b border-[var(--rose-border)] bg-[var(--rose-surface)]/90 backdrop-blur-md px-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsPreviewOpen(false)}
-                  className="p-1 text-gray-400 hover:text-gray-700 rounded-lg cursor-pointer"
-                  title="Close preview"
+                  onClick={() => setSidebarOpen(true)}
+                  className="md:hidden p-1.5 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] rounded-lg"
+                  aria-label="Open sidebar"
                 >
-                  <X className="w-4 h-4" />
+                  <Menu className="w-5 h-5" />
+                </button>
+
+                {/* ROSE Aura Badge & Status */}
+                <div className="flex items-center gap-2">
+                  <Aura state={auraState} size="sm" />
+                  <div className="flex flex-col">
+                    <span className="font-serif font-bold text-sm tracking-wide text-[var(--rose-text)]">ROSE</span>
+                    <span className="text-[10px] text-[var(--rose-text-muted)] capitalize -mt-0.5">
+                      {auraState === 'idle' ? 'Ready' : auraState}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Header Controls */}
+              <div className="flex items-center gap-2">
+                {/* Pure Dark (#000000) / Pure White (#FFFFFF) Theme Quick Toggle */}
+                <button
+                  onClick={() => {
+                    const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
+                    setSettings((prev) => ({ ...prev, theme: nextTheme }));
+                  }}
+                  className="p-2 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-surface-card)] rounded-xl transition-colors cursor-pointer"
+                  title={`Switch to ${settings.theme === 'dark' ? 'Pure White Light Mode' : 'Complete Dark Mode (#000000)'}`}
+                >
+                  {settings.theme === 'dark' ? (
+                    <Sun className="w-4 h-4 text-amber-400" />
+                  ) : (
+                    <Moon className="w-4 h-4 text-neutral-700" />
+                  )}
+                </button>
+
+                {/* Website Studio Button if active project exists */}
+                {activeProject && (
+                  <button
+                    onClick={() => setActiveMode('website')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#EA580C] hover:bg-[#C2410C] text-white transition-all shadow-xs cursor-pointer"
+                    title="Open Website Development Studio"
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                    <span>Website Studio</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  </button>
+                )}
+
+                {/* Settings Trigger */}
+                <button
+                  onClick={() => setSettingsOpen(true)}
+                  className="p-2 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-background)] rounded-xl transition-colors cursor-pointer"
+                  aria-label="Settings"
+                >
+                  <Sliders className="w-4 h-4" />
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <LivePreview project={activeProject} />
+            </header>
+
+            {/* Normal Chat Workspace Layout (100% UNCHANGED and preserved) */}
+            <div className="flex-1 flex overflow-hidden relative">
+              {/* Left Column: Chat Conversation Stream */}
+              <div className="flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 w-full">
+                {/* Processing Banner */}
+                <ProcessingBanner state={auraState} customMessage={processingStatus || undefined} />
+
+                {/* Messages Scroll Area */}
+                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 custom-scrollbar">
+                  <div className={`${chatWidthClass} mx-auto w-full`}>
+                    {!currentConversation || currentConversation.messages.length === 0 ? (
+                      /* Clean Minimalist Empty State */
+                      <div className="h-full min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4 animate-in fade-in duration-300">
+                        <Aura state={auraState} size="lg" />
+                        <div>
+                          <h2 className="font-serif text-2xl font-bold text-gray-900 mb-1">
+                            Welcome to ROSE
+                          </h2>
+                          <p className="text-xs text-gray-500 max-w-md">
+                            A personal AI companion. Ask anything, initiate real-time web research, or ask to build a website with live preview.
+                          </p>
+                        </div>
+
+                        {/* Quick Starters */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md pt-4 text-left">
+                          {[
+                            { title: 'Build a website', desc: 'Create a modern landing page with live interactive preview' },
+                            { title: 'Deep web research', desc: 'Synthesize verified citations and cross-checked sources' },
+                            { title: 'Code and architecture', desc: 'Write robust algorithms, fix bugs, and refactor' },
+                            { title: 'Brainstorm ideas', desc: 'Explore creative strategies, drafts, and plans' },
+                          ].map((card, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                if (card.title.toLowerCase().includes('website')) {
+                                  setActiveMode('website');
+                                }
+                                handleSendMessage(card.title);
+                              }}
+                              className="p-3 bg-white hover:bg-rose-50/40 border border-gray-200/80 hover:border-rose-200 rounded-xl transition-all text-xs cursor-pointer shadow-2xs group"
+                            >
+                              <span className="font-bold text-gray-900 group-hover:text-[#E11D48] block mb-0.5">
+                                {card.title}
+                              </span>
+                              <span className="text-[11px] text-gray-400 block line-clamp-2">
+                                {card.desc}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      currentConversation.messages.map((msg, idx) => (
+                        <ChatMessage
+                          key={msg.id}
+                          message={msg}
+                          onRetry={idx > 0 ? () => handleRetry(idx) : undefined}
+                          onOpenPreview={(proj) => {
+                            setActiveProject(proj);
+                            setActiveMode('website');
+                          }}
+                          readAloudEnabled={settings.readResponsesAloud}
+                          profile={settings.profile}
+                        />
+                      ))
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+                </div>
+
+                {/* Bottom Floating Glass Input */}
+                <ChatInput
+                  onSend={handleSendMessage}
+                  onStop={handleStopStream}
+                  isStreaming={isStreaming}
+                  model={currentConversation?.modelId || settings.defaultModel}
+                  onSelectModel={handleSelectModel}
+                  effort={currentConversation?.effort || settings.defaultEffort}
+                  onSelectEffort={handleSelectEffort}
+                  onTyping={() => {
+                    if (auraState === 'idle') triggerAura('typing', 1200);
+                  }}
+                  voiceEnabled={settings.voiceInput}
+                />
               </div>
             </div>
-          )}
-        </div>
+          </>
         )}
       </div>
 

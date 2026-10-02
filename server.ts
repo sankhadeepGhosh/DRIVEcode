@@ -319,8 +319,7 @@ async function streamOpenRouter(
         if (deltaContent) {
           res.write(`data: ${JSON.stringify({ chunk: deltaContent, done: false })}\n\n`);
         } else if (deltaReasoning) {
-          // SSE keepalive during reasoning generation
-          res.write(`: thinking\n\n`);
+          res.write(`data: ${JSON.stringify({ reasoningChunk: deltaReasoning, done: false })}\n\n`);
         }
       } catch {}
     }
