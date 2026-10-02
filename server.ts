@@ -47,6 +47,7 @@ app.get('/api/health', (req, res) => {
     version: '3.0.0',
     hasSystemApiKey: Boolean(process.env.GEMINI_API_KEY),
     hasOpenRouterApiKey: Boolean(process.env.OPENROUTER_API_KEY),
+    defaultModel: process.env.DEFAULT_MODEL || (process.env.OPENROUTER_API_KEY && !process.env.GEMINI_API_KEY ? 'nvidia/nemotron-3-ultra-550b-a55b:free' : 'gemini-3.8-flash'),
     supportedModels: [
       'gemini-3.8-flash',
       'gemini-3.1-flash-lite',

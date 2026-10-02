@@ -123,17 +123,18 @@ export function App() {
     fetch('/api/health')
       .then((res) => res.json())
       .then((data) => {
-        if (!data.hasSystemApiKey && data.hasOpenRouterApiKey) {
+        const targetModel = data.defaultModel || (!data.hasSystemApiKey && data.hasOpenRouterApiKey ? 'nvidia/nemotron-3-ultra-550b-a55b:free' : null);
+        if (targetModel) {
           setSettings((prev) => {
             if (prev.defaultModel === 'gemini-3.8-flash' || prev.defaultModel === 'gemini-3.1-flash-lite') {
-              return { ...prev, defaultModel: 'nvidia/nemotron-3-ultra-550b-a55b:free' };
+              return { ...prev, defaultModel: targetModel };
             }
             return prev;
           });
           setConversations((prev) =>
             prev.map((c) =>
               !c.modelId || c.modelId === 'gemini-3.8-flash' || c.modelId === 'gemini-3.1-flash-lite'
-                ? { ...c, modelId: 'nvidia/nemotron-3-ultra-550b-a55b:free' }
+                ? { ...c, modelId: targetModel }
                 : c
             )
           );
