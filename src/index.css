@@ -1,0 +1,176 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Authoritative Theme Custom Properties (Light Mode Default) */
+  --rose-accent: #E11D48;
+  --rose-accent-hover: #BE123C;
+  --rose-accent-light: rgba(225, 29, 72, 0.08);
+  --rose-background: #FAF9F6;
+  --rose-sidebar: #F5F3EF;
+  --rose-surface: #FFFFFF;
+  --rose-border: #E5E7EB;
+  --rose-text: #111827;
+  --rose-text-muted: #4B5563;
+}
+
+/* Explicit Dark Theme */
+html.dark,
+body.dark-theme {
+  --rose-background: #0B1120;
+  --rose-sidebar: #080D1A;
+  --rose-surface: #131E32;
+  --rose-border: #1E293B;
+  --rose-text: #F8FAFC;
+  --rose-text-muted: #94A3B8;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--rose-background);
+  color: var(--rose-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom CSS classes referencing theme variables */
+.theme-accent-bg {
+  background-color: var(--rose-accent) !important;
+}
+
+.theme-accent-text {
+  color: var(--rose-accent) !important;
+}
+
+.theme-accent-border {
+  border-color: var(--rose-accent) !important;
+}
+
+.theme-accent-light-bg {
+  background-color: var(--rose-accent-light) !important;
+}
+
+.font-serif {
+  font-family: 'Newsreader', Georgia, serif;
+}
+
+.font-sans {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Custom subtle scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+body.dark-theme .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* Clean markdown typography styling with authoritative high contrast */
+.rose-markdown {
+  font-size: 0.965rem;
+  line-height: 1.7;
+  color: var(--rose-text);
+}
+
+.rose-markdown p {
+  margin-bottom: 0.85rem;
+  color: var(--rose-text);
+}
+
+.rose-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.rose-markdown strong,
+.rose-markdown b {
+  font-weight: 700;
+  color: var(--rose-text);
+}
+
+.rose-markdown h1,
+.rose-markdown h2,
+.rose-markdown h3,
+.rose-markdown h4 {
+  font-weight: 700;
+  color: var(--rose-text);
+  margin-top: 1.2rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.rose-markdown h1 { font-size: 1.35rem; }
+.rose-markdown h2 { font-size: 1.2rem; }
+.rose-markdown h3 { font-size: 1.05rem; }
+.rose-markdown h4 { font-size: 0.95rem; }
+
+.rose-markdown ul,
+.rose-markdown ol {
+  margin-left: 1.25rem;
+  margin-bottom: 0.85rem;
+  color: var(--rose-text);
+}
+
+.rose-markdown ul { list-style-type: disc; }
+.rose-markdown ol { list-style-type: decimal; }
+
+.rose-markdown li {
+  margin-bottom: 0.35rem;
+  color: var(--rose-text);
+}
+
+.rose-markdown code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background-color: rgba(125, 125, 125, 0.12);
+  color: var(--rose-text);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--rose-border);
+}
+
+.rose-markdown pre {
+  background-color: #0B1120;
+  color: #F8FAFC;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  margin: 0.85rem 0;
+  border: 1px solid var(--rose-border);
+}
+
+.rose-markdown pre code {
+  background-color: transparent;
+  color: #F8FAFC;
+  padding: 0;
+  border: none;
+}
+
+.rose-markdown blockquote {
+  border-left: 3px solid var(--rose-accent);
+  padding-left: 1rem;
+  font-style: italic;
+  color: var(--rose-text-muted);
+  margin: 0.85rem 0;
+}
