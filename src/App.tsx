@@ -8,7 +8,11 @@ import {
   PanelRightClose,
   PanelRightOpen,
   X,
-  RotateCcw
+  RotateCcw,
+  Sun,
+  Moon,
+  Globe,
+  MessageSquare
 } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInput } from './components/ChatInput';
@@ -18,6 +22,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { LivePreview } from './components/LivePreview';
 import { ProcessingBanner } from './components/ProcessingBanner';
 import { LoginPage } from './components/LoginPage';
+import { WebsiteStudio } from './components/WebsiteStudio';
 import { useAuth } from './context/AuthContext';
 import { SupabaseDb } from './lib/supabase/db';
 import {
@@ -30,7 +35,8 @@ import {
   EffortLevel,
   MessageAttachment,
   GeneratedProject,
-  ResearchData
+  ResearchData,
+  ChatMode
 } from './types';
 import { Storage, DEFAULT_SETTINGS, applyTheme } from './lib/storage';
 import { AIRouter } from './lib/ai-router';
@@ -61,6 +67,7 @@ export function App() {
   const [auraState, setAuraState] = useState<AuraState>('idle');
   const [isStreaming, setIsStreaming] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string | null>(null);
+  const [activeMode, setActiveMode] = useState<ChatMode>(() => settings.activeMode || 'chat');
 
   // Active website builder preview drawer
   const [activeProject, setActiveProject] = useState<GeneratedProject | null>(null);
@@ -300,7 +307,14 @@ export function App() {
     const currentEffort = currentConversation?.effort || settings.defaultEffort;
 
     // Detect if this is a website building prompt
-    const isWebsite = WebsiteBuilder.isWebsiteRequest(text) || WebsiteBuilder.isIterationRequest(text, Boolean(activeProject));
+    const isWebsite =
+      activeMode === 'website' ||
+      WebsiteBuilder.isWebsiteRequest(text) ||
+      WebsiteBuilder.isIterationRequest(text, Boolean(activeProject));
+
+    if (isWebsite && activeMode !== 'website') {
+      setActiveMode('website');
+    }
 
     // Resolve route taking attachments and context into account
     const route = AIRouter.resolveRoute(currentModel, currentEffort, text, attachments);
@@ -745,8 +759,51 @@ export function App() {
             </div>
           </div>
 
+          {/* Middle: Mode Switcher (Chat vs Website Builder) */}
+          <div className="flex items-center bg-[var(--rose-surface-card)] border border-[var(--rose-border)] p-0.5 rounded-xl text-xs shadow-2xs">
+            <button
+              onClick={() => setActiveMode('chat')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                activeMode === 'chat'
+                  ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
+                  : 'text-[var(--rose-text-muted)] hover:text-[var(--rose-text)]'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Chat</span>
+            </button>
+            <button
+              onClick={() => setActiveMode('website')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                activeMode === 'website'
+                  ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
+                  : 'text-[var(--rose-text-muted)] hover:text-[var(--rose-text)]'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Website Builder</span>
+              {activeProject && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+            </button>
+          </div>
+
           {/* Right Header Controls */}
           <div className="flex items-center gap-2">
+            {/* Pure Dark (#000000) / Pure White (#FFFFFF) Theme Quick Toggle */}
+            <button
+              onClick={() => {
+                const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
+                setSettings((prev) => ({ ...prev, theme: nextTheme }));
+              }}
+              className="p-2 text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-surface-card)] rounded-xl transition-colors cursor-pointer"
+              title={`Switch to ${settings.theme === 'dark' ? 'Pure White Light Mode' : 'Complete Dark Mode (#000000)'}`}
+            >
+              {settings.theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-neutral-700" />
+              )}
+            </button>
+
             {/* Live Website Preview Drawer Toggle */}
             {activeProject && (
               <button
@@ -773,8 +830,26 @@ export function App() {
           </div>
         </header>
 
-        {/* Workspace Body: Split View with Live Website Preview if active */}
-        <div className="flex-1 flex overflow-hidden relative">
+        {/* Dynamic Studio vs Normal Chat Workspace */}
+        {activeMode === 'website' ? (
+          <WebsiteStudio
+            project={activeProject}
+            onBuild={async (prompt) => {
+              await handleSendMessage(prompt, [], false);
+            }}
+            isBuilding={isStreaming}
+            onExitToChat={() => setActiveMode('chat')}
+            theme={settings.theme}
+            onToggleTheme={() => {
+              const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
+              setSettings((prev) => ({ ...prev, theme: nextTheme }));
+            }}
+            onOpenSettings={() => setSettingsOpen(true)}
+            messages={currentConversation?.messages || []}
+          />
+        ) : (
+          /* Normal Chat Workspace Layout (100% UNCHANGED and preserved) */
+          <div className="flex-1 flex overflow-hidden relative">
           {/* Left Column: Chat Conversation Stream */}
           <div
             className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ${
@@ -810,7 +885,12 @@ export function App() {
                       ].map((card, i) => (
                         <button
                           key={i}
-                          onClick={() => handleSendMessage(card.title)}
+                          onClick={() => {
+                            if (card.title.toLowerCase().includes('website')) {
+                              setActiveMode('website');
+                            }
+                            handleSendMessage(card.title);
+                          }}
                           className="p-3 bg-white hover:bg-rose-50/40 border border-gray-200/80 hover:border-rose-200 rounded-xl transition-all text-xs cursor-pointer shadow-2xs group"
                         >
                           <span className="font-bold text-gray-900 group-hover:text-[#E11D48] block mb-0.5">
@@ -879,6 +959,7 @@ export function App() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Settings Modal */}

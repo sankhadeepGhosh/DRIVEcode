@@ -5,27 +5,29 @@
   --font-serif: 'Newsreader', Georgia, serif;
   --font-mono: 'JetBrains Mono', monospace;
 
-  /* Authoritative Theme Custom Properties (Light Mode Default) */
+  /* Authoritative Theme Custom Properties (Pure White Light Mode Default) */
   --rose-accent: #E11D48;
   --rose-accent-hover: #BE123C;
   --rose-accent-light: rgba(225, 29, 72, 0.08);
-  --rose-background: #FAF9F6;
-  --rose-sidebar: #F5F3EF;
+  --rose-background: #FFFFFF;
+  --rose-sidebar: #FFFFFF;
   --rose-surface: #FFFFFF;
+  --rose-surface-card: #F9FAFB;
   --rose-border: #E5E7EB;
-  --rose-text: #111827;
-  --rose-text-muted: #4B5563;
+  --rose-text: #000000;
+  --rose-text-muted: #52525B;
 }
 
-/* Explicit Dark Theme */
+/* Explicit Complete Dark Theme (Pure #000000 OLED Black) */
 html.dark,
 body.dark-theme {
-  --rose-background: #0B1120;
-  --rose-sidebar: #080D1A;
-  --rose-surface: #131E32;
-  --rose-border: #1E293B;
-  --rose-text: #F8FAFC;
-  --rose-text-muted: #94A3B8;
+  --rose-background: #000000;
+  --rose-sidebar: #000000;
+  --rose-surface: #0A0A0A;
+  --rose-surface-card: #111111;
+  --rose-border: #222222;
+  --rose-text: #FFFFFF;
+  --rose-text-muted: #A1A1AA;
 }
 
 body {

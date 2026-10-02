@@ -139,21 +139,23 @@ export function applyTheme(preset: ColorPreset, mode: 'light' | 'dark' | 'system
   if (isDark) {
     document.documentElement.classList.add('dark');
     document.body.classList.add('dark-theme');
-    root.style.setProperty('--rose-background', '#0B1120');
-    root.style.setProperty('--rose-sidebar', '#080D1A');
-    root.style.setProperty('--rose-surface', '#131E32');
-    root.style.setProperty('--rose-border', '#1E293B');
-    root.style.setProperty('--rose-text', '#F8FAFC');
-    root.style.setProperty('--rose-text-muted', '#94A3B8');
+    root.style.setProperty('--rose-background', '#000000');
+    root.style.setProperty('--rose-sidebar', '#000000');
+    root.style.setProperty('--rose-surface', '#0A0A0A');
+    root.style.setProperty('--rose-surface-card', '#111111');
+    root.style.setProperty('--rose-border', '#222222');
+    root.style.setProperty('--rose-text', '#FFFFFF');
+    root.style.setProperty('--rose-text-muted', '#A1A1AA');
   } else {
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark-theme');
-    root.style.setProperty('--rose-background', item.colors.background || '#FAF9F6');
-    root.style.setProperty('--rose-sidebar', item.colors.sidebarBg || '#F5F3EF');
-    root.style.setProperty('--rose-surface', item.colors.surface || '#FFFFFF');
-    root.style.setProperty('--rose-border', item.colors.borderColor || '#E5E7EB');
-    root.style.setProperty('--rose-text', '#111827');
-    root.style.setProperty('--rose-text-muted', '#4B5563');
+    root.style.setProperty('--rose-background', '#FFFFFF');
+    root.style.setProperty('--rose-sidebar', '#FFFFFF');
+    root.style.setProperty('--rose-surface', '#FFFFFF');
+    root.style.setProperty('--rose-surface-card', '#F9FAFB');
+    root.style.setProperty('--rose-border', '#E5E7EB');
+    root.style.setProperty('--rose-text', '#000000');
+    root.style.setProperty('--rose-text-muted', '#52525B');
   }
 }
 
