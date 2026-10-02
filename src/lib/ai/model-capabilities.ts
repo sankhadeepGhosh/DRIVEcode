@@ -41,6 +41,19 @@ export const MODEL_CAPABILITIES: Record<AIModelId, ModelCapabilities> = {
     supportsVoice: true,
     maxContextTokens: 1048576,
   },
+  'nvidia/nemotron-3-ultra-550b-a55b:free': {
+    supportsStreaming: true,
+    supportsReasoning: true,
+    supportsEffort: true,
+    supportsMultimodal: false,
+    supportsImages: false,
+    supportsAudio: false,
+    supportsVideo: false,
+    supportsPdf: false,
+    supportsFiles: true,
+    supportsVoice: false,
+    maxContextTokens: 1000000,
+  },
   'nvidia/nemotron-3.5-lightning:free': {
     supportsStreaming: true,
     supportsReasoning: false,
@@ -173,10 +186,15 @@ export function buildEffortParameters(modelId: AIModelId, effort: EffortLevel): 
 
   if (
     modelId === 'poolside/laguna-s-2.1:free' ||
-    modelId === 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
+    modelId === 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free' ||
+    modelId === 'nvidia/nemotron-3-ultra-550b-a55b:free'
   ) {
+    // Nemotron 3 Ultra supports 'medium' and 'high'
+    const resolvedEffort = modelId === 'nvidia/nemotron-3-ultra-550b-a55b:free' && effort === 'low'
+      ? 'medium'
+      : effort;
     return {
-      reasoning_effort: effort,
+      reasoning_effort: resolvedEffort,
     };
   }
 

@@ -116,7 +116,18 @@ export class AIRouter {
       };
     }
 
-    // Default primary assistant -> Gemini 3.8 Flash
+    // Default primary assistant
+    const creds = Storage.getCredentials();
+    if (!creds.geminiApiKey && creds.openRouterApiKey) {
+      return {
+        modelId: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+        provider: 'openrouter',
+        effort: userSelectedEffort,
+        isAutoRouted: true,
+        reason: 'General assistant query: routed to Nemotron 3 Ultra (550B MoE)',
+      };
+    }
+
     return {
       modelId: 'gemini-3.8-flash',
       provider: 'google',

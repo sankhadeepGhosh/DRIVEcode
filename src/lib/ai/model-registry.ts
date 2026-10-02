@@ -1,6 +1,7 @@
 export type AIModelId =
   | 'gemini-3.8-flash'
   | 'gemini-3.1-flash-lite'
+  | 'nvidia/nemotron-3-ultra-550b-a55b:free'
   | 'nvidia/nemotron-3.5-lightning:free'
   | 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free'
   | 'poolside/laguna-s-2.1:free'
@@ -44,6 +45,15 @@ export const AI_MODELS = {
     badge: 'Google',
     specialty: 'general',
   },
+  nemotronUltra: {
+    id: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+    provider: 'openrouter',
+    label: 'Nemotron 3 Ultra',
+    role: 'Frontier reasoning & orchestration',
+    description: 'NVIDIA 550B MoE frontier reasoning with 1M context window',
+    badge: '550B Free',
+    specialty: 'general',
+  },
   nemotronLightning: {
     id: 'nvidia/nemotron-3.5-lightning:free',
     provider: 'openrouter',
@@ -83,6 +93,7 @@ export const AI_MODELS = {
 } as const;
 
 export const MODEL_LIST: ModelDefinition[] = [
+  AI_MODELS.nemotronUltra,
   AI_MODELS.geminiFlash,
   AI_MODELS.geminiFlashLite,
   AI_MODELS.nemotronLightning,

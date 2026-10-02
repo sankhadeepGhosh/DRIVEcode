@@ -48,8 +48,11 @@ app.get('/api/health', (req, res) => {
     hasSystemApiKey: Boolean(process.env.GEMINI_API_KEY),
     hasOpenRouterApiKey: Boolean(process.env.OPENROUTER_API_KEY),
     supportedModels: [
+      'gemini-3.8-flash',
       'gemini-3.1-flash-lite',
+      'nvidia/nemotron-3-ultra-550b-a55b:free',
       'nvidia/nemotron-3.5-lightning:free',
+      'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
       'poolside/laguna-s-2.1:free',
       'nex-agi/nex-n2.5-pro:free',
     ],
@@ -260,8 +263,13 @@ async function streamOpenRouter(
   };
 
   // Only pass reasoning parameters if supported
-  if (model === 'poolside/laguna-s-2.1:free' && (effort === 'low' || effort === 'medium' || effort === 'high')) {
+  if (
+    (model === 'poolside/laguna-s-2.1:free' || model === 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free') &&
+    (effort === 'low' || effort === 'medium' || effort === 'high')
+  ) {
     payload.reasoning_effort = effort;
+  } else if (model === 'nvidia/nemotron-3-ultra-550b-a55b:free' && (effort === 'low' || effort === 'medium' || effort === 'high')) {
+    payload.reasoning_effort = effort === 'low' ? 'medium' : effort;
   }
 
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -356,10 +364,12 @@ app.post('/api/chat', async (req, res) => {
 
   // 1. If OpenRouter model selected
   const isOpenRouterModel =
+    modelId === 'nvidia/nemotron-3-ultra-550b-a55b:free' ||
     modelId === 'nvidia/nemotron-3.5-lightning:free' ||
     modelId === 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free' ||
     modelId === 'poolside/laguna-s-2.1:free' ||
-    modelId === 'nex-agi/nex-n2.5-pro:free';
+    modelId === 'nex-agi/nex-n2.5-pro:free' ||
+    modelId.includes('/');
 
   if (isOpenRouterModel) {
     const effectiveOpenRouterKey = (typeof openRouterApiKey === 'string' && openRouterApiKey.trim())
@@ -481,6 +491,31 @@ app.post('/api/chat', async (req, res) => {
           console.warn(`[ROSE Server] Gemini ${modelName} fallback attempt: ${errMsg.slice(0, 80)}`);
         }
       }
+    }
+  }
+
+  // 2.5 Automatic OpenRouter fallback when Gemini is unconfigured
+  const effectiveOpenRouterKey = (typeof openRouterApiKey === 'string' && openRouterApiKey.trim())
+    ? openRouterApiKey.trim()
+    : process.env.OPENROUTER_API_KEY?.trim();
+
+  if (!ai && effectiveOpenRouterKey) {
+    try {
+      const fallbackModel = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+      await streamOpenRouter(fallbackModel, prompt || '', attachments, history, effectiveOpenRouterKey, effort, res);
+      res.end();
+      return;
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      res.write(
+        `data: ${JSON.stringify({
+          error: true,
+          message: `Nemotron 3 Ultra fallback failed: ${errMsg.slice(0, 100)}`,
+          done: true,
+        })}\n\n`
+      );
+      res.end();
+      return;
     }
   }
 

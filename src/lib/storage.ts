@@ -110,7 +110,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   chatWidth: 'comfortable',
   desktopWallpaper: DEFAULT_WALLPAPER,
   mobileWallpaper: DEFAULT_WALLPAPER,
-  defaultModel: 'gemini-3.8-flash',
+  defaultModel: 'nvidia/nemotron-3-ultra-550b-a55b:free',
   defaultEffort: 'medium',
   defaultMode: 'chat',
   profile: DEFAULT_PROFILE,

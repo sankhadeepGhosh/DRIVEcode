@@ -502,6 +502,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   onChange={(e) => onUpdateSettings({ defaultModel: e.target.value as any })}
                   className="w-full p-2.5 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:outline-none focus:border-[#E11D48]"
                 >
+                  <option value="nvidia/nemotron-3-ultra-550b-a55b:free">Nemotron 3 Ultra (550B Frontier Reasoning - Free)</option>
                   <option value="gemini-3.8-flash">Gemini 3.8 Flash (Primary Multi-Step Reasoning)</option>
                   <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Fast Secondary Assistant)</option>
                   <option value="nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free">Nemotron 3 Nano Omni (Free Multimodal Media & Reasoning)</option>
@@ -564,6 +565,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/80 text-xs text-gray-600 leading-relaxed">
                 <span className="font-semibold text-gray-800 block mb-1">Available Models:</span>
                 <ul className="space-y-1 list-disc list-inside text-[11px] text-gray-600">
+                  <li><strong>Nemotron 3 Ultra:</strong> NVIDIA 550B MoE frontier reasoning with 1M context (Free).</li>
                   <li><strong>Gemini 3.8 Flash:</strong> Google primary assistant for complex reasoning, websites & agentic tasks.</li>
                   <li><strong>Gemini 3.1 Flash-Lite:</strong> Google ultra-fast secondary assistant.</li>
                   <li><strong>Nemotron 3 Nano Omni:</strong> Free multimodal powerhouse supporting images, audio, video & reasoning.</li>

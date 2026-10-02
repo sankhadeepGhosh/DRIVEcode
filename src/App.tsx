@@ -118,6 +118,30 @@ export function App() {
     };
   }, [user]);
 
+  // Auto-detect server API keys and auto-migrate model if Gemini key is absent
+  useEffect(() => {
+    fetch('/api/health')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.hasSystemApiKey && data.hasOpenRouterApiKey) {
+          setSettings((prev) => {
+            if (prev.defaultModel === 'gemini-3.8-flash' || prev.defaultModel === 'gemini-3.1-flash-lite') {
+              return { ...prev, defaultModel: 'nvidia/nemotron-3-ultra-550b-a55b:free' };
+            }
+            return prev;
+          });
+          setConversations((prev) =>
+            prev.map((c) =>
+              !c.modelId || c.modelId === 'gemini-3.8-flash' || c.modelId === 'gemini-3.1-flash-lite'
+                ? { ...c, modelId: 'nvidia/nemotron-3-ultra-550b-a55b:free' }
+                : c
+            )
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Active conversation object
   const currentConversation = conversations.find((c) => c.id === activeId);
 
@@ -268,7 +292,11 @@ export function App() {
     if ((!text.trim() && attachments.length === 0) || isStreaming) return;
 
     let targetConvId = activeId;
-    const currentModel = currentConversation?.modelId || settings.defaultModel;
+    const rawModel = currentConversation?.modelId || settings.defaultModel;
+    const currentModel =
+      (!credentials.geminiApiKey && (rawModel === 'gemini-3.8-flash' || rawModel === 'gemini-3.1-flash-lite'))
+        ? 'nvidia/nemotron-3-ultra-550b-a55b:free'
+        : rawModel;
     const currentEffort = currentConversation?.effort || settings.defaultEffort;
 
     // Detect if this is a website building prompt

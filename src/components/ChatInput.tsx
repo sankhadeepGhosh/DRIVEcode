@@ -149,6 +149,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
   const getModelLabel = () => {
     if (model === 'auto') return 'Auto (Smart Route)';
+    if (model === 'nvidia/nemotron-3-ultra-550b-a55b:free') return 'Nemotron 3 Ultra';
     if (model === 'gemini-3.8-flash') return 'Gemini 3.8 Flash';
     if (model === 'gemini-3.1-flash-lite') return 'Gemini 3.1 Flash-Lite';
     if (model === 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free') return 'Nemotron Omni';
@@ -273,6 +274,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     >
                       <span>Auto (Smart Route)</span>
                       <span className="text-[10px] text-gray-400">Intelligent</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        onSelectModel('nvidia/nemotron-3-ultra-550b-a55b:free');
+                        setShowModelPicker(false);
+                      }}
+                      className={`w-full text-left px-2 py-1.5 rounded-lg flex items-center justify-between cursor-pointer ${
+                        model === 'nvidia/nemotron-3-ultra-550b-a55b:free'
+                          ? 'bg-rose-50 text-[#E11D48] font-bold'
+                          : 'hover:bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      <span>Nemotron 3 Ultra</span>
+                      <span className="text-[10px] text-gray-400">550B MoE/Free</span>
                     </button>
                     <button
                       onClick={() => {
