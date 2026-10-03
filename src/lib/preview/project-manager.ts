@@ -106,26 +106,34 @@ Always ensure index.html is complete and ready to render in an isolated sandboxe
 The user has requested to build a website:
 "${userPrompt}"
 
-RULES:
-1. Build a complete, production-ready, beautiful, responsive single-page or multi-section website.
-2. Include modern Tailwind CSS (via CDN: <script src="https://cdn.tailwindcss.com"></script>), Google Fonts (Inter, Plus Jakarta Sans, etc.), and clean responsive components.
-3. Include functional interactivity (e.g., interactive calculators, filtering, modals, smooth tab switching, responsive mobile menus, themes, or forms).
-4. Output the code inside a fenced code block with the filename:
+CRITICAL OUTPUT RULES:
+1. You MUST start your response IMMEDIATELY on line 1 with:
 \`\`\`html:index.html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Generated Website</title>
+  <title>Website Preview</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+  </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
+<body class="bg-black text-white min-h-screen antialiased">
   ...
+  <script>lucide.createIcons();</script>
 </body>
 </html>
 \`\`\`
-Ensure the generated code is 100% complete and self-contained with no omitted snippets.`;
+2. DO NOT write markdown summaries, explanations, aspect lists, comparison tables, or commentary outside of the code block.
+3. Every button, interaction, state, and form MUST be functional and visually stunning.
+4. If the user asks for a specific section (e.g. "hero section", "pricing table", "portfolio header"), wrap it in a complete, gorgeous full-page preview with background effects, navigation, and interactive buttons so it displays immediately in the live browser preview.
+5. Output 100% complete, production-ready code with no placeholders or omitted snippets.`;
   }
 
   /**
@@ -133,53 +141,127 @@ Ensure the generated code is 100% complete and self-contained with no omitted sn
    */
   static parseProjectFiles(responseText: string): ProjectFile[] {
     const files: ProjectFile[] = [];
-    // Matches ```language:filepath or ```filepath or ```language with filepath on first line
-    const regex = /```(?:[a-zA-Z0-9_-]+:)?([a-zA-Z0-9_./-]+\.[a-zA-Z0-9]+)?\n([\s\S]*?)```/g;
+
+    // Match all fenced blocks: ```html:index.html or ```html or ```css:styles.css
+    const codeBlockRegex = /```([a-zA-Z0-9_.-]+)?(?::([a-zA-Z0-9_./-]+))?\s*\n([\s\S]*?)```/g;
     let match;
 
-    while ((match = regex.exec(responseText)) !== null) {
-      let filePath = match[1] || 'index.html';
-      const content = match[2].trim();
+    while ((match = codeBlockRegex.exec(responseText)) !== null) {
+      const lang = (match[1] || '').toLowerCase().trim();
+      let filePath = (match[2] || '').trim();
+      const content = match[3].trim();
 
-      // Normalize filePath
-      if (filePath.includes(':')) {
-        filePath = filePath.split(':')[1];
-      }
-      if (!filePath.includes('.')) {
-        filePath = 'index.html';
+      if (!content) continue;
+
+      const hasHtmlTags =
+        content.includes('<!DOCTYPE') ||
+        content.includes('<html') ||
+        content.includes('<body') ||
+        content.includes('<section') ||
+        content.includes('<div') ||
+        content.includes('<header') ||
+        content.includes('<main');
+
+      let cleanContent = content;
+      // Strip any trailing markdown notes/tables accidentally appended after HTML closing tags
+      const lowerContent = cleanContent.toLowerCase();
+      const endHtmlTag = lowerContent.lastIndexOf('</html>');
+      if (endHtmlTag !== -1 && endHtmlTag + 7 < cleanContent.length) {
+        const trailing = cleanContent.slice(endHtmlTag + 7).trim();
+        if (trailing.startsWith('#') || trailing.startsWith('---') || trailing.startsWith('|') || trailing.startsWith('**')) {
+          cleanContent = cleanContent.slice(0, endHtmlTag + 7);
+        }
+      } else {
+        const endSectionTag = lowerContent.lastIndexOf('</section>');
+        if (endSectionTag !== -1 && endSectionTag + 10 < cleanContent.length) {
+          const trailing = cleanContent.slice(endSectionTag + 10).trim();
+          if (trailing.startsWith('#') || trailing.startsWith('---') || trailing.startsWith('|') || trailing.startsWith('**')) {
+            cleanContent = cleanContent.slice(0, endSectionTag + 10);
+          }
+        }
       }
 
-      files.push({
-        path: filePath,
-        content,
-      });
+      if (!filePath) {
+        if (lang === 'html' || lang === 'htm' || hasHtmlTags) {
+          filePath = 'index.html';
+        } else if (lang === 'css' || lang === 'style') {
+          filePath = 'styles.css';
+        } else if (lang === 'javascript' || lang === 'js' || lang === 'ts' || lang === 'typescript') {
+          filePath = 'script.js';
+        } else {
+          filePath = 'README.md';
+        }
+      }
+
+      // Safety: If named index.html but contains NO HTML markup and is markdown table/notes, demote to README.md
+      if ((filePath === 'index.html' || filePath.endsWith('.html')) && !hasHtmlTags) {
+        filePath = 'README.md';
+      }
+
+      files.push({ path: filePath, content: cleanContent });
     }
 
-    // Fallback 1: If no fenced files were captured with filename, extract any html codeblock
-    if (files.length === 0) {
-      const htmlBlockMatch = responseText.match(/```(?:html)?\s*\n([\s\S]*?)```/i);
-      if (htmlBlockMatch && htmlBlockMatch[1] && (htmlBlockMatch[1].includes('<html') || htmlBlockMatch[1].includes('<!DOCTYPE') || htmlBlockMatch[1].includes('<div'))) {
-        files.push({
-          path: 'index.html',
-          content: htmlBlockMatch[1].trim(),
-        });
-      }
-    }
+    // Fallback 1: If no valid HTML file was extracted from fences, look for raw HTML anywhere in the response
+    const hasValidHtml = files.some(
+      (f) =>
+        (f.path === 'index.html' || f.path.endsWith('.html')) &&
+        f.content.includes('<') &&
+        (f.content.includes('<html') ||
+          f.content.includes('<!DOCTYPE') ||
+          f.content.includes('<div') ||
+          f.content.includes('<section') ||
+          f.content.includes('<body') ||
+          f.content.includes('<header'))
+    );
 
-    // Fallback 2: Direct raw HTML detection if model returned unwrapped HTML markup
-    if (files.length === 0) {
+    if (!hasValidHtml) {
       const lower = responseText.toLowerCase();
       const doctypeIdx = lower.indexOf('<!doctype html');
       const htmlIdx = lower.indexOf('<html');
-      const startIdx = doctypeIdx !== -1 ? doctypeIdx : htmlIdx;
-      if (startIdx !== -1) {
-        const endIdx = lower.lastIndexOf('</html>');
-        const rawContent = endIdx !== -1 ? responseText.slice(startIdx, endIdx + 7) : responseText.slice(startIdx);
-        files.push({
+      const sectionIdx = lower.indexOf('<section');
+      const divIdx = lower.indexOf('<div');
+
+      const candidates = [doctypeIdx, htmlIdx, sectionIdx, divIdx].filter((idx) => idx !== -1);
+      if (candidates.length > 0) {
+        const startIdx = Math.min(...candidates);
+        const endHtml = lower.lastIndexOf('</html>');
+        let rawContent = '';
+        if (endHtml !== -1) {
+          rawContent = responseText.slice(startIdx, endHtml + 7);
+        } else {
+          const sectionEnd = lower.lastIndexOf('</section>');
+          const mainEnd = lower.lastIndexOf('</main>');
+          const closingIdx = Math.max(sectionEnd !== -1 ? sectionEnd + 10 : -1, mainEnd !== -1 ? mainEnd + 7 : -1);
+          if (closingIdx !== -1) {
+            rawContent = responseText.slice(startIdx, closingIdx);
+          } else {
+            const tail = responseText.slice(startIdx);
+            const markdownDividerIdx = tail.search(/\n\s*---\s*\n|\n\s*##\s+/);
+            rawContent = markdownDividerIdx !== -1 ? tail.slice(0, markdownDividerIdx) : tail;
+          }
+        }
+
+        files.unshift({
           path: 'index.html',
           content: rawContent.trim(),
         });
       }
+    }
+
+    // Ensure index.html is prioritized first if it contains HTML
+    const trueIndexIdx = files.findIndex(
+      (f) =>
+        f.content.includes('<!DOCTYPE') ||
+        f.content.includes('<html') ||
+        f.content.includes('<body') ||
+        f.content.includes('<section') ||
+        f.content.includes('<div')
+    );
+
+    if (trueIndexIdx > 0) {
+      const [trueHtml] = files.splice(trueIndexIdx, 1);
+      trueHtml.path = 'index.html';
+      files.unshift(trueHtml);
     }
 
     return files;
@@ -189,12 +271,60 @@ Ensure the generated code is 100% complete and self-contained with no omitted sn
    * Generates a safe, isolated srcdoc HTML for iframe rendering
    */
   static generateSandboxHtml(files: ProjectFile[]): string {
-    const indexFile = files.find((f) => f.path === 'index.html' || f.path.endsWith('.html')) || files[0];
+    // Authoritative selection: find the file that ACTUALLY contains HTML markup
+    let indexFile = files.find(
+      (f) =>
+        (f.path === 'index.html' || f.path.endsWith('.html')) &&
+        (f.content.includes('<!DOCTYPE') ||
+          f.content.includes('<html') ||
+          f.content.includes('<body') ||
+          f.content.includes('<div') ||
+          f.content.includes('<section') ||
+          f.content.includes('<header'))
+    );
+
+    // Fallback: any file with HTML tags
     if (!indexFile) {
+      indexFile = files.find(
+        (f) =>
+          f.content.includes('<!DOCTYPE') ||
+          f.content.includes('<html') ||
+          f.content.includes('<body') ||
+          f.content.includes('<div') ||
+          f.content.includes('<section')
+      );
+    }
+
+    if (!indexFile) indexFile = files[0];
+    if (!indexFile || !indexFile.content.trim()) {
       return `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:2rem;text-align:center;color:#6b7280;"><h3>Preview not ready yet</h3></body></html>`;
     }
 
     let html = indexFile.content;
+
+    // Wrap section / fragment in full HTML5 harness if not already full document
+    if (!html.includes('<html') && !html.includes('<!DOCTYPE')) {
+      html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; margin: 0; padding: 0; min-height: 100vh; }
+  </style>
+</head>
+<body class="bg-black text-white antialiased">
+  ${html}
+  <script>if (window.lucide) lucide.createIcons();</script>
+</body>
+</html>`;
+    }
 
     // Inject any auxiliary CSS or JS files if defined separately
     const cssFiles = files.filter((f) => f.path.endsWith('.css'));
