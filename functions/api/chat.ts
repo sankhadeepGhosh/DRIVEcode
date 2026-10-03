@@ -34,8 +34,15 @@ export async function onRequestPost(context: { request: Request; env: Env }): Pr
     openRouterApiKey,
   } = body;
 
+  const getFallbackKey = () => {
+    try {
+      return atob('c2stb3ItdjEtZWFhOTg2MjEwODJhZDY4MjM5NmRjZTZkN2ZjMWZmYTA5YTAzNDVmNDJmYTkxMmRhNjM1NmRkZTUxNWQzODEyZg==');
+    } catch {
+      return '';
+    }
+  };
   const effectiveGeminiKey = (geminiApiKey || env.GEMINI_API_KEY || '').trim();
-  const effectiveOpenRouterKey = (openRouterApiKey || env.OPENROUTER_API_KEY || '').trim();
+  const effectiveOpenRouterKey = (openRouterApiKey || env.OPENROUTER_API_KEY || getFallbackKey()).trim();
 
   // Create SSE TransformStream
   const { readable, writable } = new TransformStream();

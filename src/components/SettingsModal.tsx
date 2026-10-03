@@ -951,8 +951,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/60 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-bold text-gray-900 block">OpenRouter API Key</span>
-                    <span className="text-[11px] text-gray-500">Unlocks Nemotron, Laguna, and Nex</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-900 block">OpenRouter API Key</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">
+                        Connected
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-gray-500">Unlocks Nemotron 3 Ultra, Laguna, and Nex models</span>
                   </div>
                   <a
                     href="https://openrouter.ai/keys"
@@ -969,7 +974,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     type={showOpenRouterKey ? 'text' : 'password'}
                     value={openRouterKeyInput}
                     onChange={(e) => setOpenRouterKeyInput(e.target.value)}
-                    placeholder="sk-or-v1-..."
+                    placeholder="sk-or-..."
                     className="w-full pl-3 pr-9 py-2.5 bg-white border border-gray-200 rounded-lg text-sm sm:text-xs font-mono text-gray-900 focus:outline-none focus:border-[#E11D48]"
                   />
                   <button

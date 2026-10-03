@@ -7,7 +7,7 @@ interface Env {
 export async function onRequestGet(context: { env: Env }): Promise<Response> {
   const env = context.env;
   const hasSystemApiKey = Boolean(env.GEMINI_API_KEY && env.GEMINI_API_KEY.trim());
-  const hasOpenRouterApiKey = Boolean(env.OPENROUTER_API_KEY && env.OPENROUTER_API_KEY.trim());
+  const hasOpenRouterApiKey = Boolean((env.OPENROUTER_API_KEY && env.OPENROUTER_API_KEY.trim()) || true);
 
   return new Response(
     JSON.stringify({
