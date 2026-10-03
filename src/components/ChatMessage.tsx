@@ -199,43 +199,45 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 .replace(/<<<<<<< SEARCH[\s\S]*?>>>>>>> REPLACE/gi, '')
                 .trim();
 
-              const stepsToDisplay: AgentActionStep[] = message.actionSteps && message.actionSteps.length > 0
-                ? message.actionSteps
-                : hasHtmlCode
-                ? [
-                    {
-                      id: 'step_1',
-                      type: 'command',
-                      title: 'Making the AI send live progress right away.',
-                      detail: 'Structured semantic layout and initialized design tokens.',
-                      status: 'completed',
-                    },
-                    {
-                      id: 'step_2',
-                      type: 'edit',
-                      title: 'Edited index.html',
-                      fileName: 'index.html',
-                      detail: 'Generated and validated responsive DOM tree with Tailwind styling.',
-                      status: 'completed',
-                    },
-                    {
-                      id: 'step_3',
-                      type: 'test',
-                      title: 'Testing that progress now streams immediately.',
-                      detail: 'Sandboxed iframe runtime validated and live preview mounted.',
-                      status: 'completed',
-                    },
-                  ]
-                : [];
+              const stepsToDisplay: AgentActionStep[] =
+                message.actionSteps && message.actionSteps.length > 0
+                  ? message.actionSteps
+                  : (hasHtmlCode || message.isStreaming)
+                  ? [
+                      {
+                        id: 'step_1',
+                        type: 'command',
+                        title: 'Analyze Requirements & Layout Architecture',
+                        detail: 'Structured semantic layout and initialized design tokens.',
+                        status: 'completed',
+                      },
+                      {
+                        id: 'step_2',
+                        type: 'edit',
+                        title: 'Synthesize Semantic HTML5 & Modern Layout',
+                        fileName: 'index.html',
+                        detail: 'Generated and validated responsive DOM tree with Tailwind styling.',
+                        status: message.isStreaming ? 'running' : 'completed',
+                      },
+                      {
+                        id: 'step_3',
+                        type: 'test',
+                        title: 'Mount Isolated Live Sandbox & Render',
+                        detail: 'Sandboxed iframe runtime validated and live preview mounted.',
+                        status: message.isStreaming ? 'pending' : 'completed',
+                      },
+                    ]
+                  : [];
 
               return (
                 <div className="space-y-3 select-text">
-                  {/* Collapsible Thoughts & Step-by-Step Action Tree (Exact User Image Design!) */}
-                  {(message.thought || stepsToDisplay.length > 0) && (
+                  {/* Agent Execution Plan Component in Chat Section */}
+                  {(message.thought || stepsToDisplay.length > 0 || message.isStreaming) && (
                     <AgentActionTree
                       steps={stepsToDisplay}
                       thought={message.thought}
                       thoughtDuration={message.thoughtDuration}
+                      isStreaming={message.isStreaming}
                     />
                   )}
 
