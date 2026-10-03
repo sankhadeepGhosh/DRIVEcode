@@ -601,43 +601,51 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                     <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block">
                       Build History
                     </span>
-                    {websiteMessages.slice(-5).map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`p-3 rounded-xl text-xs border space-y-2 ${
-                          msg.error
-                            ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-                            : msg.role === 'user'
-                            ? isDarkMode
-                              ? 'bg-[#080808] border-[#171717] text-neutral-300'
-                              : 'bg-gray-50 border-gray-200 text-gray-800'
-                            : 'bg-[#EA580C]/10 border-[#EA580C]/20 text-neutral-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-1.5 font-semibold text-[11px]">
-                          {msg.error ? (
-                            <span className="text-rose-400 flex items-center gap-1">
-                              <AlertTriangle className="w-3.5 h-3.5" /> Generation Error
-                            </span>
-                          ) : msg.role === 'user' ? (
-                            <span className="text-neutral-400">Prompt</span>
-                          ) : (
-                            <span className="text-[#EA580C] flex items-center gap-1">
-                              <Sparkles className="w-3 h-3" /> Forge {msg.isPatchEdit ? 'Patch' : 'Build'}
-                            </span>
-                          )}
-                        </div>
+                    {websiteMessages.slice(-5).map((msg, idx, arr) => {
+                      const userPromptText =
+                        arr.slice(0, idx).reverse().find((m) => m.role === 'user')?.content ||
+                        project?.title ||
+                        'Build a website';
+                      const isCurrentStreaming = Boolean(msg.isStreaming || (isBuilding && msg.id === lastAssistantMsg?.id));
 
-                        {/* Collapsible Action Tree with step-by-step progress */}
-                        {msg.role === 'assistant' && !msg.error && (
-                          <AgentActionTree
-                            steps={msg.actionSteps}
-                            tasks={msg.isStreaming || (isBuilding && msg.id === lastAssistantMsg?.id) ? websiteBuildingTasks : undefined}
-                            thought={msg.thought}
-                            thoughtDuration={msg.thoughtDuration}
-                            isStreaming={Boolean(msg.isStreaming || (isBuilding && msg.id === lastAssistantMsg?.id))}
-                          />
-                        )}
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`p-3 rounded-xl text-xs border space-y-2 ${
+                            msg.error
+                              ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                              : msg.role === 'user'
+                              ? isDarkMode
+                                ? 'bg-[#080808] border-[#171717] text-neutral-300'
+                                : 'bg-gray-50 border-gray-200 text-gray-800'
+                              : 'bg-[#EA580C]/10 border-[#EA580C]/20 text-neutral-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 font-semibold text-[11px]">
+                            {msg.error ? (
+                              <span className="text-rose-400 flex items-center gap-1">
+                                <AlertTriangle className="w-3.5 h-3.5" /> Generation Error
+                              </span>
+                            ) : msg.role === 'user' ? (
+                              <span className="text-neutral-400">Prompt</span>
+                            ) : (
+                              <span className="text-[#EA580C] flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" /> Forge {msg.isPatchEdit ? 'Patch' : 'Build'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Collapsible Action Tree with accurate step-by-step progress */}
+                          {msg.role === 'assistant' && !msg.error && (
+                            <AgentActionTree
+                              prompt={userPromptText}
+                              code={primaryFile?.content || msg.content}
+                              steps={msg.actionSteps}
+                              thought={msg.thought}
+                              thoughtDuration={msg.thoughtDuration}
+                              isStreaming={isCurrentStreaming}
+                            />
+                          )}
 
                         {msg.error ? (
                           <div className="space-y-2 pt-0.5">
@@ -668,7 +676,8 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                           </p>
                         ) : null}
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 )}
               </>

@@ -6,63 +6,27 @@ import {
   Bot
 } from 'lucide-react';
 import { AgentActionStep } from '../types';
-import Plan, { Task, Subtask } from './ui/agent-plan';
+import Plan, { Task } from './ui/agent-plan';
+import { AgentPlanAnalyzer } from '../lib/preview/plan-analyzer';
 
 interface AgentActionTreeProps {
   steps?: AgentActionStep[];
   tasks?: Task[];
+  prompt?: string;
+  code?: string;
+  fileName?: string;
   thought?: string;
   thoughtDuration?: number;
   isStreaming?: boolean;
   className?: string;
 }
 
-const PIPELINE_TEMPLATE = [
-  {
-    id: '1',
-    title: 'Analyze Requirements & Layout Architecture',
-    description: 'Extract prompt intent, structure components, and select visual design system.',
-    priority: 'high',
-    tools: ['prompt-analyzer', 'ai-router'],
-    subtaskTitle: 'Parse prompt specifications & tokens',
-  },
-  {
-    id: '2',
-    title: 'Synthesize Semantic HTML5 & Modern Layout',
-    description: 'Construct accessible DOM tree with semantic header, hero, sections, and footer.',
-    priority: 'high',
-    tools: ['html-generator', 'code-assistant'],
-    subtaskTitle: 'Generate semantic HTML5 structure & SVG icons',
-  },
-  {
-    id: '3',
-    title: 'Apply Modern Tailwind CSS & Responsive Tokens',
-    description: 'Inject Tailwind utility classes, fluid spacing, smooth gradients, and dark/light modes.',
-    priority: 'high',
-    tools: ['tailwind-engine', 'css-optimizer'],
-    subtaskTitle: 'Configure Tailwind CDN and responsive breakpoints',
-  },
-  {
-    id: '4',
-    title: 'Inject Interactivity & Client State Handlers',
-    description: 'Attach vanilla JavaScript handlers for filters, toggles, calculators, or modals.',
-    priority: 'medium',
-    tools: ['js-runtime', 'state-manager'],
-    subtaskTitle: 'Bind DOM event listeners and local state',
-  },
-  {
-    id: '5',
-    title: 'Mount Isolated Live Sandbox & Render',
-    description: 'Bundle complete index.html and initialize isolated sandboxed iframe.',
-    priority: 'high',
-    tools: ['sandbox-runtime', 'preview-engine'],
-    subtaskTitle: 'Mount sandbox iframe and verify runtime execution',
-  },
-];
-
 export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
   steps = [],
   tasks,
+  prompt,
+  code,
+  fileName = 'index.html',
   thought,
   thoughtDuration,
   isStreaming = false,
@@ -91,105 +55,18 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
     thoughtDuration ||
     (hasThought ? Math.max(3, Math.min(20, Math.round(thought!.length / 80))) : 0);
 
-  // Compute step-by-step tasks
+  // Compute accurate, prompt-specific and code-specific step-by-step tasks
   const planTasks: Task[] = React.useMemo(() => {
     if (tasks && tasks.length > 0) return tasks;
 
-    if (isStreaming) {
-      // Step by step progression during live build:
-      // Step 1: 0s-3s in-progress, >=3s completed
-      // Step 2: <3s pending, 3s-7s in-progress, >=7s completed
-      // Step 3: <7s pending, 7s-11s in-progress, >=11s completed
-      // Step 4: <11s pending, 11s-14s in-progress, >=14s completed
-      // Step 5: <14s pending, >=14s in-progress
-      const startTimes = [0, 3, 7, 11, 14];
-      const endTimes = [3, 7, 11, 14, 9999];
-
-      return PIPELINE_TEMPLATE.map((item, idx) => {
-        const isCompleted = streamSeconds >= endTimes[idx];
-        const isInProgress = streamSeconds >= startTimes[idx] && streamSeconds < endTimes[idx];
-        const status = isCompleted ? 'completed' : isInProgress ? 'in-progress' : 'pending';
-
-        return {
-          id: item.id,
-          title: item.title,
-          description: item.description,
-          status,
-          priority: item.priority,
-          level: idx > 1 ? 1 : 0,
-          dependencies: idx > 0 ? [String(idx)] : [],
-          subtasks: [
-            {
-              id: `${item.id}.1`,
-              title: item.subtaskTitle,
-              description: item.description,
-              status,
-              priority: item.priority,
-              tools: item.tools,
-            },
-          ],
-        };
-      });
-    }
-
-    // When NOT streaming (completed message)
-    if (steps && steps.length > 0) {
-      return steps.map((step, idx) => {
-        const stepStatus = step.status === 'failed' ? 'failed' : 'completed';
-        const tools =
-          step.type === 'edit'
-            ? ['code-editor', 'file-system', 'patch-engine']
-            : step.type === 'test'
-            ? ['sandbox-runtime', 'preview-engine']
-            : step.type === 'read'
-            ? ['file-system', 'ast-parser']
-            : ['prompt-analyzer', 'ai-router'];
-
-        return {
-          id: String(idx + 1),
-          title: step.title,
-          description: step.detail || (step.fileName ? `Target: ${step.fileName}` : 'Agent orchestrated step'),
-          status: stepStatus,
-          priority: 'high',
-          level: 0,
-          dependencies: idx > 0 ? [String(idx)] : [],
-          subtasks: [
-            {
-              id: `${idx + 1}.1`,
-              title: step.detail || step.title,
-              description: step.fileName
-                ? `Target file: ${step.fileName}`
-                : (step.detail || 'Autonomous task execution'),
-              status: stepStatus,
-              priority: 'high',
-              tools,
-            },
-          ],
-        };
-      });
-    }
-
-    // Default completed 5-step pipeline for finished build messages
-    return PIPELINE_TEMPLATE.map((item, idx) => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      status: 'completed',
-      priority: item.priority,
-      level: idx > 1 ? 1 : 0,
-      dependencies: idx > 0 ? [String(idx)] : [],
-      subtasks: [
-        {
-          id: `${item.id}.1`,
-          title: item.subtaskTitle,
-          description: item.description,
-          status: 'completed',
-          priority: item.priority,
-          tools: item.tools,
-        },
-      ],
-    }));
-  }, [steps, tasks, isStreaming, streamSeconds]);
+    return AgentPlanAnalyzer.generateAccurateTasks({
+      prompt: prompt || 'Build a modern interactive web application',
+      code: code || '',
+      isStreaming,
+      elapsedSeconds: streamSeconds,
+      fileName,
+    });
+  }, [tasks, prompt, code, isStreaming, streamSeconds, fileName]);
 
   const hasAnyPlan = planTasks.length > 0;
   const completedCount = planTasks.filter((t) => t.status === 'completed').length;

@@ -234,6 +234,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   {/* Agent Execution Plan Component in Chat Section */}
                   {(message.thought || stepsToDisplay.length > 0 || message.isStreaming) && (
                     <AgentActionTree
+                      code={message.content}
                       steps={stepsToDisplay}
                       thought={message.thought}
                       thoughtDuration={message.thoughtDuration}
