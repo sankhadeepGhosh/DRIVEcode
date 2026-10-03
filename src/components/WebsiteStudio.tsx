@@ -574,18 +574,18 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
             {/* If Previewing Tab is active: Show Progress / Ticking Checklist & Prompts */}
             {sideTab === 'previewing' ? (
               <>
-                {/* Real-time Ticking Checklist when Building (Image 1 Feature) */}
+                {/* Real-time Agent Plan in Chat Section */}
                 {(isBuilding || project) && (
                   <div
-                    className={`rounded-2xl p-4 border space-y-3 shadow-sm ${
+                    className={`rounded-2xl p-3 border space-y-2 shadow-sm ${
                       isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
                     }`}
                   >
                     <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
                       <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-[#EA580C]" />
+                        <Sparkles className="w-3.5 h-3.5 text-[#EA580C]" />
                         <span className="text-xs font-bold uppercase tracking-wider text-neutral-300">
-                          {isBuilding ? 'Build In Progress' : 'Build Specification'}
+                          {isBuilding ? 'Agent Execution Plan' : 'Build Specification'}
                         </span>
                       </div>
                       <span
@@ -595,92 +595,12 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                             : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         }`}
                       >
-                        {isBuilding ? 'Ticking...' : 'Compiled'}
+                        {isBuilding ? `Active · ${elapsedSeconds}s` : 'Compiled'}
                       </span>
                     </div>
 
-                    {/* Step list matching Image 1: Thinking, Writing structure, Styling, Adding interactivity, Done */}
-                    <div className="space-y-2 text-xs">
-                      <div
-                        className={`flex items-center gap-2 transition-colors ${
-                          stepProgress.step1 ? 'text-emerald-400' : 'text-neutral-500'
-                        }`}
-                      >
-                        {stepProgress.step1 ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        ) : (
-                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
-                        )}
-                        <span className={stepProgress.step1 ? 'text-neutral-200' : 'text-neutral-500'}>
-                          Thinking & understanding requirements
-                        </span>
-                      </div>
-
-                      <div
-                        className={`flex items-center gap-2 transition-colors ${
-                          stepProgress.step2 ? 'text-emerald-400' : 'text-neutral-500'
-                        }`}
-                      >
-                        {stepProgress.step2 ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        ) : isBuilding && stepProgress.step1 ? (
-                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
-                        ) : (
-                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
-                        )}
-                        <span className={stepProgress.step2 ? 'text-neutral-200' : 'text-neutral-500'}>
-                          Writing semantic structure (HTML5)
-                        </span>
-                      </div>
-
-                      <div
-                        className={`flex items-center gap-2 transition-colors ${
-                          stepProgress.step3 ? 'text-emerald-400' : 'text-neutral-500'
-                        }`}
-                      >
-                        {stepProgress.step3 ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        ) : isBuilding && stepProgress.step2 ? (
-                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
-                        ) : (
-                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
-                        )}
-                        <span className={stepProgress.step3 ? 'text-neutral-200' : 'text-neutral-500'}>
-                          Styling (Tailwind CSS & design tokens)
-                        </span>
-                      </div>
-
-                      <div
-                        className={`flex items-center gap-2 transition-colors ${
-                          stepProgress.step4 ? 'text-emerald-400' : 'text-neutral-500'
-                        }`}
-                      >
-                        {stepProgress.step4 ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        ) : isBuilding && stepProgress.step3 ? (
-                          <Loader2 className="w-3.5 h-3.5 shrink-0 animate-spin text-[#EA580C]" />
-                        ) : (
-                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
-                        )}
-                        <span className={stepProgress.step4 ? 'text-neutral-200' : 'text-neutral-500'}>
-                          Adding interactivity & state handlers (JavaScript)
-                        </span>
-                      </div>
-
-                      <div
-                        className={`flex items-center gap-2 transition-colors ${
-                          stepProgress.step5 ? 'text-emerald-400' : 'text-neutral-500'
-                        }`}
-                      >
-                        {stepProgress.step5 ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                        ) : (
-                          <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 shrink-0" />
-                        )}
-                        <span className={stepProgress.step5 ? 'text-neutral-200 font-semibold' : 'text-neutral-500'}>
-                          Done & live sandbox mounted
-                        </span>
-                      </div>
+                    <div className="max-h-[380px] overflow-y-auto custom-scrollbar rounded-xl">
+                      <Plan initialTasks={websiteBuildingTasks} title="Agent Action Plan" className="p-0 max-w-full" />
                     </div>
                   </div>
                 )}
@@ -818,20 +738,6 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                   <p>3. The live preview updates automatically in real-time.</p>
                   <p>4. Export standalone .html anytime with one click.</p>
                 </div>
-
-                <div
-                  className={`p-4 rounded-2xl border space-y-3 ${
-                    isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
-                  }`}
-                >
-                  <h3 className="font-semibold text-sm text-neutral-100 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#EA580C]" />
-                    <span>Autonomous Agent Workflow Plan</span>
-                  </h3>
-                  <div className="rounded-xl border border-neutral-800/80 bg-black/60 overflow-hidden">
-                    <Plan initialTasks={websiteBuildingTasks} />
-                  </div>
-                </div>
               </div>
             )}
 
@@ -934,33 +840,25 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 </div>
               )
             ) : isBuilding ? (
-              /* Live Agent Processing UI (Agent Plan with live tasks & MCP servers) */
-              <div className="flex-1 w-full h-full flex flex-col p-3 md:p-5 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                <div className="flex items-center justify-between pb-3 mb-2 border-b border-neutral-800 shrink-0">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-[#EA580C]/15 border border-[#EA580C]/40 flex items-center justify-center text-[#EA580C] shadow-sm animate-pulse">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h3 className="font-serif text-sm sm:text-base font-bold text-neutral-100 flex items-center gap-2">
-                        Forge Agent Execution Plan
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EA580C]/20 text-[#EA580C] font-mono uppercase tracking-wider font-semibold">
-                          Active Run
-                        </span>
-                      </h3>
-                      <p className="text-[11px] text-neutral-400">
-                        Live autonomous subtask orchestration, MCP tool calls, and state verification
-                      </p>
-                    </div>
+              /* Live Building Canvas State with animated pulse */
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-3xl bg-[#EA580C]/10 border border-[#EA580C]/30 flex items-center justify-center shadow-lg shadow-[#EA580C]/10 animate-pulse">
+                    <Loader2 className="w-8 h-8 text-[#EA580C] animate-spin" />
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 shrink-0">
-                    <Clock className="w-3.5 h-3.5 text-[#EA580C]" />
-                    <span>Elapsed: {elapsedSeconds}s</span>
-                  </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 animate-ping" />
                 </div>
-
-                <div className="flex-1 overflow-auto rounded-xl border border-neutral-800/80 bg-black/60 custom-scrollbar">
-                  <Plan initialTasks={websiteBuildingTasks} />
+                <div className="space-y-2 max-w-sm">
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-neutral-100">
+                    Architecting Your Website...
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed">
+                    Generating responsive layout, modern Tailwind styles, and live interactive state handlers.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
+                  <Clock className="w-3.5 h-3.5 text-[#EA580C]" />
+                  <span>Elapsed: {elapsedSeconds}s</span>
                 </div>
               </div>
             ) : lastErrorMessage ? (
