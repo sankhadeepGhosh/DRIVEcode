@@ -37,6 +37,7 @@ import {
 import { FONT_DEFINITIONS, FONT_SIZES } from '../lib/fonts';
 import { COLOR_PRESETS } from '../lib/storage';
 import { UsageTracker, AggregatedUsage } from '../lib/usage-tracker';
+import { DirectAIClient } from '../lib/ai/direct-client';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -113,8 +114,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           apiKey: geminiKeyInput.trim(),
         }),
       });
-      const data = await res.json();
-      setGeminiTestMessage(data.message || (data.success ? 'Connected successfully!' : 'Check failed.'));
+      if (res.ok) {
+        const data = await res.json();
+        setGeminiTestMessage(data.message || (data.success ? 'Connected successfully!' : 'Check failed.'));
+        return;
+      }
+    } catch {}
+
+    // Fallback to direct client verification if backend is unavailable (e.g. Cloudflare static)
+    try {
+      const direct = await DirectAIClient.testGeminiKey(geminiKeyInput.trim());
+      setGeminiTestMessage(direct.message);
     } catch {
       setGeminiTestMessage('Network error during test.');
     } finally {
@@ -134,8 +144,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           apiKey: openRouterKeyInput.trim(),
         }),
       });
-      const data = await res.json();
-      setOpenRouterTestMessage(data.message || (data.success ? 'Connected successfully!' : 'Check failed.'));
+      if (res.ok) {
+        const data = await res.json();
+        setOpenRouterTestMessage(data.message || (data.success ? 'Connected successfully!' : 'Check failed.'));
+        return;
+      }
+    } catch {}
+
+    // Fallback to direct client verification if backend is unavailable (e.g. Cloudflare static)
+    try {
+      const direct = await DirectAIClient.testOpenRouterKey(openRouterKeyInput.trim());
+      setOpenRouterTestMessage(direct.message);
     } catch {
       setOpenRouterTestMessage('Network error during test.');
     } finally {
