@@ -241,15 +241,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                     />
                   )}
 
-                  {/* Clean Human Explanation Text */}
-                  {textCommentary && (
+                  {/* Clean Human Explanation Text (omitted for website builds to keep clean focus on agent steps) */}
+                  {textCommentary && !hasHtmlCode && (
                     <div className="rose-markdown">
                       <Markdown>{textCommentary}</Markdown>
                     </div>
                   )}
 
-                  {/* Live Streaming Indicator */}
-                  {message.isStreaming && (
+                  {/* Live Streaming Indicator (only if not already showing agent plan) */}
+                  {message.isStreaming && !hasHtmlCode && stepsToDisplay.length === 0 && (
                     <div className="flex items-center gap-2 text-xs text-[#EA580C] animate-pulse">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       <span>Thinking and assembling components...</span>

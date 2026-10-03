@@ -574,37 +574,6 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
             {/* If Previewing Tab is active: Show Progress / Ticking Checklist & Prompts */}
             {sideTab === 'previewing' ? (
               <>
-                {/* Real-time Agent Plan in Chat Section */}
-                {(isBuilding || project) && (
-                  <div
-                    className={`rounded-2xl p-3 border space-y-2 shadow-sm ${
-                      isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-3.5 h-3.5 text-[#EA580C]" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-neutral-300">
-                          {isBuilding ? 'Agent Execution Plan' : 'Build Specification'}
-                        </span>
-                      </div>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                          isBuilding
-                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        }`}
-                      >
-                        {isBuilding ? `Active · ${elapsedSeconds}s` : 'Compiled'}
-                      </span>
-                    </div>
-
-                    <div className="max-h-[380px] overflow-y-auto custom-scrollbar rounded-xl">
-                      <Plan initialTasks={websiteBuildingTasks} title="Agent Action Plan" className="p-0 max-w-full" />
-                    </div>
-                  </div>
-                )}
-
                 {/* Editorial Prompt Starters (Image 1 Layout) */}
                 <div className="space-y-2 pt-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block">
@@ -659,12 +628,14 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                           )}
                         </div>
 
-                        {/* Collapsible Action Tree if available */}
-                        {msg.role === 'assistant' && !msg.error && (msg.thought || (msg.actionSteps && msg.actionSteps.length > 0)) && (
+                        {/* Collapsible Action Tree with step-by-step progress */}
+                        {msg.role === 'assistant' && !msg.error && (
                           <AgentActionTree
                             steps={msg.actionSteps}
+                            tasks={msg.isStreaming || (isBuilding && msg.id === lastAssistantMsg?.id) ? websiteBuildingTasks : undefined}
                             thought={msg.thought}
                             thoughtDuration={msg.thoughtDuration}
+                            isStreaming={Boolean(msg.isStreaming || (isBuilding && msg.id === lastAssistantMsg?.id))}
                           />
                         )}
 
@@ -691,17 +662,11 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                               </button>
                             </div>
                           </div>
-                        ) : (
-                          <p className="leading-relaxed line-clamp-3">
-                            {msg.role === 'user'
-                              ? msg.content
-                              : msg.content
-                              ? msg.content.replace(/```[\s\S]*?```/g, '').trim()
-                              : project
-                              ? `Compiled "${project.title}" (${project.files.length} file)`
-                              : 'Generated code bundle'}
+                        ) : msg.role === 'user' ? (
+                          <p className="leading-relaxed text-neutral-200">
+                            {msg.content}
                           </p>
-                        )}
+                        ) : null}
                       </div>
                     ))}
                   </div>
