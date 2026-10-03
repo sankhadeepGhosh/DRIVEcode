@@ -26,11 +26,19 @@ import {
   ChevronRight,
   ChevronDown,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Smartphone,
+  Tablet,
+  Laptop,
+  Monitor,
+  GripVertical,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import { GeneratedProject, Message } from '../types';
 import { WebsiteBuilder } from '../lib/preview/project-manager';
 import { AgentActionTree } from './AgentActionTree';
+import { AgentPlanAnalyzer } from '../lib/preview/plan-analyzer';
 import Plan, { Task } from './ui/agent-plan';
 
 interface WebsiteStudioProps {
@@ -64,6 +72,120 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   const [previewKey, setPreviewKey] = useState(0);
   const [fontSerifMode, setFontSerifMode] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Stretchable preview panel state & split layout
+  const [previewWidth, setPreviewWidth] = useState<number | '100%'>('100%');
+  const [isResizingPreview, setIsResizingPreview] = useState<'left' | 'right' | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(440);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  const [isResizingSidebar, setIsResizingSidebar] = useState<boolean>(false);
+
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const previewFrameRef = useRef<HTMLDivElement>(null);
+  const previewDragStartRef = useRef<{ startX: number; startWidth: number; side: 'left' | 'right' }>({
+    startX: 0,
+    startWidth: 0,
+    side: 'right',
+  });
+  const sidebarDragStartRef = useRef<{ startX: number; startWidth: number }>({
+    startX: 0,
+    startWidth: 440,
+  });
+
+  const getBreakpointLabel = (width: number | '100%') => {
+    if (width === '100%') return { label: '100% · Responsive', id: 'full' };
+    if (width <= 480) return { label: `${width}px · Mobile`, id: 'mobile' };
+    if (width <= 820) return { label: `${width}px · Tablet`, id: 'tablet' };
+    if (width <= 1180) return { label: `${width}px · Laptop`, id: 'laptop' };
+    return { label: `${width}px · Desktop`, id: 'desktop' };
+  };
+
+  const devicePresets: Array<{ id: 'mobile' | 'tablet' | 'laptop' | 'full'; width: number | '100%'; label: string; icon: any }> = [
+    { id: 'mobile', width: 375, label: 'Mobile (375px)', icon: Smartphone },
+    { id: 'tablet', width: 768, label: 'Tablet (768px)', icon: Tablet },
+    { id: 'laptop', width: 1024, label: 'Laptop (1024px)', icon: Laptop },
+    { id: 'full', width: '100%', label: 'Responsive (100%)', icon: Monitor },
+  ];
+
+  const handleStartPreviewResize = (e: React.MouseEvent, side: 'left' | 'right') => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentPixelWidth = previewFrameRef.current
+      ? previewFrameRef.current.getBoundingClientRect().width
+      : (canvasContainerRef.current?.clientWidth || 1000) - 32;
+
+    previewDragStartRef.current = {
+      startX: e.clientX,
+      startWidth: typeof previewWidth === 'number' ? previewWidth : currentPixelWidth,
+      side,
+    };
+    setIsResizingPreview(side);
+  };
+
+  const handleStartSidebarResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    sidebarDragStartRef.current = {
+      startX: e.clientX,
+      startWidth: sidebarWidth,
+    };
+    setIsResizingSidebar(true);
+  };
+
+  // Dragging event listeners for preview handles and sidebar divider
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingPreview) {
+        const { startX, startWidth, side } = previewDragStartRef.current;
+        const maxCanvasWidth = canvasContainerRef.current?.clientWidth
+          ? canvasContainerRef.current.clientWidth - 32
+          : window.innerWidth - 60;
+
+        let delta = 0;
+        if (side === 'right') {
+          delta = (e.clientX - startX) * 2;
+        } else {
+          delta = (startX - e.clientX) * 2;
+        }
+
+        const calculated = Math.round(startWidth + delta);
+        const clamped = Math.max(320, Math.min(maxCanvasWidth, calculated));
+
+        if (clamped >= maxCanvasWidth - 20) {
+          setPreviewWidth('100%');
+        } else {
+          setPreviewWidth(clamped);
+        }
+      }
+
+      if (isResizingSidebar) {
+        const { startX, startWidth } = sidebarDragStartRef.current;
+        const delta = e.clientX - startX;
+        const newWidth = Math.max(280, Math.min(680, startWidth + delta));
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (isResizingPreview) {
+        setIsResizingPreview(null);
+      }
+      if (isResizingSidebar) {
+        setIsResizingSidebar(false);
+      }
+    };
+
+    if (isResizingPreview || isResizingSidebar) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingPreview, isResizingSidebar]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -201,128 +323,17 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
     step5: !isBuilding && Boolean(project),
   };
 
-  // Dynamic website generation tasks for the Agent Plan component
-  const websiteBuildingTasks: Task[] = [
-    {
-      id: "1",
-      title: "Analyze Requirements & Layout Architecture",
-      description: "Extract prompt intent, structure components, and select visual design system.",
-      status: elapsedSeconds >= 1 ? (elapsedSeconds >= 4 ? "completed" : "in-progress") : "pending",
-      priority: "high",
-      level: 0,
-      dependencies: [],
-      subtasks: [
-        {
-          id: "1.1",
-          title: "Parse prompt specifications",
-          description: "Analyze requested layout hierarchy, color scheme, and component requirements.",
-          status: elapsedSeconds >= 1 ? "completed" : "in-progress",
-          priority: "high",
-          tools: ["prompt-analyzer", "ai-router"],
-        },
-        {
-          id: "1.2",
-          title: "Define component structure & responsive grid",
-          description: "Select font pairing (Inter/Plus Jakarta Sans) and responsive layout tokens.",
-          status: elapsedSeconds >= 3 ? "completed" : elapsedSeconds >= 1 ? "in-progress" : "pending",
-          priority: "medium",
-          tools: ["design-system", "layout-planner"],
-        },
-      ],
-    },
-    {
-      id: "2",
-      title: "Synthesize Semantic HTML5 & Modern Layout",
-      description: "Construct accessible DOM tree with semantic header, hero, sections, and footer.",
-      status: elapsedSeconds >= 4 ? (elapsedSeconds >= 8 ? "completed" : "in-progress") : "pending",
-      priority: "high",
-      level: 0,
-      dependencies: ["1"],
-      subtasks: [
-        {
-          id: "2.1",
-          title: "Generate clean semantic markup",
-          description: "Create HTML5 structure with SEO metadata and responsive containers.",
-          status: elapsedSeconds >= 6 ? "completed" : elapsedSeconds >= 4 ? "in-progress" : "pending",
-          priority: "high",
-          tools: ["html-generator", "code-assistant"],
-        },
-        {
-          id: "2.2",
-          title: "Add SVGs and Lucide icon vectors",
-          description: "Embed crisp SVG icons for visual accents and interactive elements.",
-          status: elapsedSeconds >= 8 ? "completed" : elapsedSeconds >= 6 ? "in-progress" : "pending",
-          priority: "medium",
-          tools: ["icon-library", "vector-engine"],
-        },
-      ],
-    },
-    {
-      id: "3",
-      title: "Apply Modern Tailwind CSS & Responsive Tokens",
-      description: "Inject Tailwind utility classes, fluid spacing, smooth gradients, and dark/light modes.",
-      status: elapsedSeconds >= 8 ? (elapsedSeconds >= 13 ? "completed" : "in-progress") : "pending",
-      priority: "high",
-      level: 1,
-      dependencies: ["2"],
-      subtasks: [
-        {
-          id: "3.1",
-          title: "Configure Tailwind CDN and custom styles",
-          description: "Set up utility palette, glassmorphism, animations, and typography.",
-          status: elapsedSeconds >= 10 ? "completed" : elapsedSeconds >= 8 ? "in-progress" : "pending",
-          priority: "high",
-          tools: ["tailwind-engine", "css-optimizer"],
-        },
-        {
-          id: "3.2",
-          title: "Verify responsive mobile & tablet breakpoints",
-          description: "Ensure layout adapts smoothly from mobile screens to desktop ultrawide.",
-          status: elapsedSeconds >= 13 ? "completed" : elapsedSeconds >= 10 ? "in-progress" : "pending",
-          priority: "medium",
-          tools: ["viewport-simulator"],
-        },
-      ],
-    },
-    {
-      id: "4",
-      title: "Inject Interactivity & Client State Handlers",
-      description: "Attach vanilla JavaScript handlers for filters, toggles, calculators, or modals.",
-      status: elapsedSeconds >= 13 ? (project ? "completed" : "in-progress") : "pending",
-      priority: "medium",
-      level: 1,
-      dependencies: ["3"],
-      subtasks: [
-        {
-          id: "4.1",
-          title: "Bind DOM event listeners and local state",
-          description: "Add functional interactivity for buttons, inputs, tabs, and animations.",
-          status: elapsedSeconds >= 15 || Boolean(project) ? "completed" : elapsedSeconds >= 13 ? "in-progress" : "pending",
-          priority: "high",
-          tools: ["js-runtime", "state-manager"],
-        },
-      ],
-    },
-    {
-      id: "5",
-      title: "Mount Isolated Live Sandbox & Render",
-      description: "Bundle complete index.html and initialize isolated sandboxed iframe.",
-      status: Boolean(project) ? "completed" : elapsedSeconds >= 16 ? "in-progress" : "pending",
-      priority: "high",
-      level: 1,
-      dependencies: ["4"],
-      subtasks: [
-        {
-          id: "5.1",
-          title: "Mount sandbox iframe and verify execution",
-          description: "Verify console errors and mount live interactive page.",
-          status: Boolean(project) ? "completed" : "pending",
-          priority: "high",
-          tools: ["sandbox-runtime", "preview-engine"],
-        },
-      ],
-    },
-  ];
+  // Dynamic website generation tasks from the shared plan analyzer
+  const lastUserPrompt = [...messages].reverse().find((m) => m.role === 'user')?.content || 'Build a website';
+  const websiteBuildingTasks: Task[] = React.useMemo(() => {
+    return AgentPlanAnalyzer.generateAccurateTasks({
+      prompt: lastUserPrompt,
+      code: primaryFile?.content || '',
+      isStreaming: isBuilding,
+      elapsedSeconds,
+      fileName: primaryFile?.path || 'index.html',
+    });
+  }, [lastUserPrompt, primaryFile?.content, isBuilding, elapsedSeconds, primaryFile?.path]);
 
   const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
@@ -514,10 +525,19 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
         {/* LEFT COLUMN: Prompt Playground & Progress Checklist (Desktop & Mobile Chat Tab) */}
         {/* ======================================================== */}
         <div
-          className={`flex flex-col h-full overflow-hidden transition-all duration-200 border-r ${
-            mobileTab === 'chat' ? 'w-full md:w-[440px] lg:w-[480px] flex' : 'hidden md:flex md:w-[440px] lg:w-[480px]'
+          className={`flex flex-col h-full overflow-hidden ${
+            isResizingSidebar ? 'transition-none select-none' : 'transition-[width] duration-150'
+          } border-r ${
+            mobileTab === 'chat'
+              ? 'w-full flex'
+              : isSidebarCollapsed
+              ? 'hidden md:hidden'
+              : 'hidden md:flex'
           } shrink-0 ${isDarkMode ? 'border-[#171717] bg-black' : 'border-gray-200 bg-white'}`}
-          style={{ backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }}
+          style={{
+            backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
+            width: !isSidebarCollapsed ? `${sidebarWidth}px` : 0,
+          }}
         >
           {/* Sub-Header: Details vs Previewing Tabs (Exact Match to Image 1) */}
           <div
@@ -573,127 +593,148 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
           <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 custom-scrollbar">
             {/* If Previewing Tab is active: Show Progress / Ticking Checklist & Prompts */}
             {sideTab === 'previewing' ? (
-              <>
-                {/* Editorial Prompt Starters (Image 1 Layout) */}
-                <div className="space-y-2 pt-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block">
-                    Quick Website Starters
-                  </span>
-                  {suggestionCards.map((suggestion, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleCardClick(suggestion)}
-                      disabled={isBuilding}
-                      className={`w-full text-left p-3.5 rounded-2xl border text-xs sm:text-[13px] font-medium transition-all shadow-2xs group cursor-pointer disabled:opacity-50 ${
+              <div className="space-y-4">
+                {/* If NO project, NO messages, and NOT building: Show Starters */}
+                {websiteMessages.length === 0 && !project && !isBuilding ? (
+                  <div className="space-y-2.5 pt-1">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block">
+                      Quick Website Starters
+                    </span>
+                    {suggestionCards.map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleCardClick(suggestion)}
+                        disabled={isBuilding}
+                        className={`w-full text-left p-3.5 rounded-2xl border text-xs sm:text-[13px] font-medium transition-all shadow-xs group cursor-pointer disabled:opacity-50 ${
+                          isDarkMode
+                            ? 'bg-[#080808] border-[#171717] hover:border-[#EA580C]/70 text-neutral-200 hover:text-white'
+                            : 'bg-white border-gray-200 hover:border-[#EA580C]/70 text-gray-800'
+                        }`}
+                      >
+                        <span className="block truncate">{suggestion}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  /* Website Exists or is Building: Showcase the Agent Execution Steps Cleanly! */
+                  <div className="space-y-3.5 animate-in fade-in duration-300">
+                    {/* Active Build Prompt Card */}
+                    <div
+                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 shadow-xs ${
                         isDarkMode
-                          ? 'bg-[#080808] border-[#171717] hover:border-[#EA580C]/70 text-neutral-200 hover:text-white'
-                          : 'bg-white border-gray-200 hover:border-[#EA580C]/70 text-gray-800'
+                          ? 'bg-[#080808] border-[#1a1a1a]'
+                          : 'bg-gray-50/80 border-gray-200'
                       }`}
                     >
-                      <span className="block truncate">{suggestion}</span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Project Iteration History */}
-                {websiteMessages.length > 0 && (
-                  <div className="space-y-3 pt-3 border-t border-neutral-800">
-                    <span className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider block">
-                      Build History
-                    </span>
-                    {websiteMessages.slice(-5).map((msg, idx, arr) => {
-                      const userPromptText =
-                        arr.slice(0, idx).reverse().find((m) => m.role === 'user')?.content ||
-                        project?.title ||
-                        'Build a website';
-                      const isCurrentStreaming = Boolean(msg.isStreaming || (isBuilding && msg.id === lastAssistantMsg?.id));
-
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`p-3 rounded-xl text-xs border space-y-2 ${
-                            msg.error
-                              ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
-                              : msg.role === 'user'
-                              ? isDarkMode
-                                ? 'bg-[#080808] border-[#171717] text-neutral-300'
-                                : 'bg-gray-50 border-gray-200 text-gray-800'
-                              : 'bg-[#EA580C]/10 border-[#EA580C]/20 text-neutral-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 font-semibold text-[11px]">
-                            {msg.error ? (
-                              <span className="text-rose-400 flex items-center gap-1">
-                                <AlertTriangle className="w-3.5 h-3.5" /> Generation Error
-                              </span>
-                            ) : msg.role === 'user' ? (
-                              <span className="text-neutral-400">Prompt</span>
-                            ) : (
-                              <span className="text-[#EA580C] flex items-center gap-1">
-                                <Sparkles className="w-3 h-3" /> Forge {msg.isPatchEdit ? 'Patch' : 'Build'}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Collapsible Action Tree with accurate step-by-step progress */}
-                          {msg.role === 'assistant' && !msg.error && (
-                            <AgentActionTree
-                              prompt={userPromptText}
-                              code={primaryFile?.content || msg.content}
-                              steps={msg.actionSteps}
-                              thought={msg.thought}
-                              thoughtDuration={msg.thoughtDuration}
-                              isStreaming={isCurrentStreaming}
-                            />
-                          )}
-
-                        {msg.error ? (
-                          <div className="space-y-2 pt-0.5">
-                            <p className="leading-relaxed text-neutral-300">
-                              {msg.errorMessage || 'AI generation failed.'}
-                            </p>
-                            <div className="flex items-center gap-2 pt-1">
-                              <button
-                                onClick={onOpenSettings}
-                                className="px-2.5 py-1 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
-                              >
-                                Configure API Key
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
-                                  if (lastUser) onBuild(lastUser.content);
-                                }}
-                                className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
-                              >
-                                Retry
-                              </button>
-                            </div>
-                          </div>
-                        ) : msg.role === 'user' ? (
-                          <p className="leading-relaxed text-neutral-200">
-                            {msg.content}
-                          </p>
-                        ) : null}
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#EA580C] block mb-0.5">
+                          {isBuilding ? 'Active Build Request' : 'Website Project'}
+                        </span>
+                        <p className={`text-xs sm:text-sm font-semibold truncate ${
+                          isDarkMode ? 'text-neutral-100' : 'text-gray-900'
+                        }`}>
+                          {lastUserPrompt}
+                        </p>
                       </div>
-                    );
-                  })}
+
+                      <div className="shrink-0 flex items-center gap-1.5">
+                        {isBuilding ? (
+                          <span className="text-[10px] px-2.5 py-1 rounded-full bg-[#EA580C]/15 text-[#EA580C] font-mono font-medium flex items-center gap-1.5 animate-pulse">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <span>0:{elapsedSeconds < 10 ? `0${elapsedSeconds}` : elapsedSeconds}s</span>
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Ready</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Prominent Agent Execution Steps (Identical to Chat Section) */}
+                    <div className="w-full">
+                      <AgentActionTree
+                        prompt={lastUserPrompt}
+                        code={primaryFile?.content || currentCode}
+                        steps={lastAssistantMsg?.actionSteps}
+                        thought={lastAssistantMsg?.thought}
+                        thoughtDuration={lastAssistantMsg?.thoughtDuration}
+                        isStreaming={isBuilding}
+                        elapsedSeconds={elapsedSeconds}
+                      />
+                    </div>
+
+                    {/* Generation Error banner if any */}
+                    {lastErrorMessage && (
+                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs space-y-2">
+                        <div className="flex items-center gap-1.5 font-semibold text-rose-400">
+                          <AlertTriangle className="w-4 h-4" />
+                          <span>Generation Error</span>
+                        </div>
+                        <p className="leading-relaxed">{lastErrorMessage}</p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={onOpenSettings}
+                            className="px-2.5 py-1 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                          >
+                            Configure API Key
+                          </button>
+                          <button
+                            onClick={() => onBuild(lastUserPrompt)}
+                            className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Iteration History (for multiple prompts) */}
+                    {websiteMessages.filter((m) => m.role === 'user').length > 1 && (
+                      <div className="pt-2 border-t border-inherit">
+                        <details className="group">
+                          <summary className="text-[11px] font-semibold text-neutral-400 hover:text-neutral-200 cursor-pointer flex items-center justify-between list-none py-1">
+                            <span>Past Iterations ({websiteMessages.filter((m) => m.role === 'user').length})</span>
+                            <span className="text-neutral-500 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                          </summary>
+                          <div className="space-y-2 pt-2">
+                            {websiteMessages
+                              .filter((m) => m.role === 'user')
+                              .slice(0, -1)
+                              .map((m, i) => (
+                                <div
+                                  key={m.id || i}
+                                  className={`p-2.5 rounded-xl border text-xs ${
+                                    isDarkMode
+                                      ? 'bg-[#080808] border-[#171717] text-neutral-300'
+                                      : 'bg-gray-50 border-gray-200 text-gray-700'
+                                  }`}
+                                >
+                                  <span className="text-[10px] text-neutral-400 block mb-0.5">Iteration #{i + 1}</span>
+                                  <p className="truncate">{m.content}</p>
+                                </div>
+                              ))}
+                          </div>
+                        </details>
+                      </div>
+                    )}
                   </div>
                 )}
-              </>
+              </div>
             ) : (
               /* Details Tab (Image 1 Feature) */
-              <div className="space-y-4 text-xs text-neutral-300">
+              <div className={`space-y-4 text-xs ${isDarkMode ? 'text-neutral-300' : 'text-gray-700'}`}>
                 <div
                   className={`p-4 rounded-2xl border space-y-3 ${
                     isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
                   }`}
                 >
-                  <h3 className="font-semibold text-sm text-neutral-100 flex items-center gap-2">
+                  <h3 className={`font-semibold text-sm flex items-center gap-2 ${isDarkMode ? 'text-neutral-100' : 'text-gray-900'}`}>
                     <Layers className="w-4 h-4 text-[#EA580C]" />
                     <span>Project Architecture</span>
                   </h3>
-                  <div className="space-y-1.5 text-neutral-400">
+                  <div className={`space-y-1.5 ${isDarkMode ? 'text-neutral-400' : 'text-gray-600'}`}>
                     <p>• <strong>Stack</strong>: HTML5, Tailwind CSS, Vanilla JavaScript</p>
                     <p>• <strong>Runtime</strong>: Sandboxed Client-Side Iframe</p>
                     <p>• <strong>Theme</strong>: Pure Black (#000000) & White (#FFFFFF)</p>
@@ -702,11 +743,11 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 </div>
 
                 <div
-                  className={`p-4 rounded-2xl border space-y-2 text-neutral-400 leading-relaxed ${
-                    isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
+                  className={`p-4 rounded-2xl border space-y-2 leading-relaxed ${
+                    isDarkMode ? 'bg-[#080808] border-[#171717] text-neutral-400' : 'bg-gray-50 border-gray-200 text-gray-600'
                   }`}
                 >
-                  <p className="font-semibold text-neutral-200">How Forge Works:</p>
+                  <p className={`font-semibold ${isDarkMode ? 'text-neutral-200' : 'text-gray-900'}`}>How Forge Works:</p>
                   <p>1. Type any app idea (e.g. &ldquo;pomodoro timer&rdquo; or &ldquo;snake game&rdquo;).</p>
                   <p>2. The AI writes clean, self-contained code without bloating chat.</p>
                   <p>3. The live preview updates automatically in real-time.</p>
@@ -727,7 +768,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
             <form
               onSubmit={handleSubmit}
               className={`relative rounded-2xl border focus-within:border-[#EA580C] transition-all p-3 shadow-sm ${
-                isDarkMode ? 'bg-[#080808] border-[#222222]' : 'bg-gray-50 border-gray-300'
+                isDarkMode ? 'bg-[#080808] border-[#222222]' : 'bg-white border-gray-300'
               }`}
             >
               <textarea
@@ -738,10 +779,12 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Ask Forge to build..."
                 disabled={isBuilding}
-                className="w-full resize-none bg-transparent text-xs sm:text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none leading-relaxed pr-16"
+                className={`w-full resize-none bg-transparent text-xs sm:text-sm placeholder:text-neutral-400 focus:outline-none leading-relaxed pr-16 ${
+                  isDarkMode ? 'text-neutral-100' : 'text-gray-900'
+                }`}
               />
               <div className="flex items-center justify-between pt-1">
-                <span className="text-[10px] text-neutral-500">
+                <span className={`text-[10px] ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`}>
                   Shift+Enter for newline
                 </span>
                 <button
@@ -760,21 +803,176 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
           </div>
         </div>
 
+        {/* Draggable Divider between Sidebar and Canvas (Desktop only) */}
+        {!isSidebarCollapsed && (
+          <div
+            onMouseDown={handleStartSidebarResize}
+            onDoubleClick={() => setIsSidebarCollapsed(true)}
+            className={`hidden md:flex items-center justify-center w-2 -mx-1 cursor-col-resize z-30 group select-none transition-all ${
+              isResizingSidebar ? 'bg-[#EA580C] w-2.5' : 'hover:bg-[#EA580C]/40'
+            }`}
+            title="Drag to adjust sidebar width (double-click to collapse)"
+          >
+            <div className="w-0.5 h-10 rounded-full bg-neutral-600 group-hover:bg-[#EA580C] transition-colors" />
+          </div>
+        )}
+
         {/* ======================================================== */}
         {/* RIGHT COLUMN: Canvas Live Preview & Code View (Desktop & Mobile Preview Tab) */}
         {/* ======================================================== */}
         <div
+          ref={canvasContainerRef}
           className={`flex-1 flex flex-col h-full overflow-hidden relative ${
             mobileTab === 'preview' ? 'w-full flex' : 'hidden md:flex'
-          } p-3 md:p-4`}
+          }`}
           style={{ backgroundColor: isDarkMode ? '#000000' : '#FFFFFF' }}
         >
-          {/* Main Rounded Canvas Area (Pure Black OLED Container) */}
+          {/* Top Canvas Bar: Presets & Controls */}
           <div
-            className={`flex-1 w-full h-full rounded-2xl md:rounded-3xl border relative overflow-hidden flex flex-col shadow-inner ${
-              isDarkMode ? 'border-[#171717] bg-[#050505]' : 'border-gray-200 bg-gray-100'
+            className={`h-11 px-4 border-b flex items-center justify-between shrink-0 select-none z-10 ${
+              isDarkMode ? 'border-[#171717] bg-[#050505]' : 'border-gray-200 bg-gray-50'
             }`}
           >
+            {/* Left: Sidebar Collapse/Expand Toggle + Dimension Badge */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                className={`p-1.5 rounded-lg border transition-colors cursor-pointer hidden md:flex items-center gap-1.5 text-xs ${
+                  isDarkMode
+                    ? 'bg-[#0a0a0a] border-[#222222] text-neutral-400 hover:text-white'
+                    : 'bg-white border-gray-200 text-gray-600 hover:text-gray-900'
+                }`}
+                title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                {isSidebarCollapsed ? <PanelLeftOpen className="w-3.5 h-3.5" /> : <PanelLeftClose className="w-3.5 h-3.5" />}
+                <span className="text-[11px] font-medium hidden sm:inline">
+                  {isSidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}
+                </span>
+              </button>
+
+              {/* Dimension Pill Badge */}
+              <div
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border ${
+                  isDarkMode
+                    ? 'bg-[#0a0a0a] border-[#222222] text-neutral-300'
+                    : 'bg-white border-gray-200 text-gray-700'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-[#EA580C] animate-pulse" />
+                <span>{getBreakpointLabel(previewWidth).label}</span>
+                {previewWidth !== '100%' && (
+                  <button
+                    onClick={() => setPreviewWidth('100%')}
+                    className="ml-1 text-[10px] text-neutral-400 hover:text-[#EA580C] transition-colors underline cursor-pointer"
+                    title="Reset to 100% responsive width"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Center: Device Presets (Mobile / Tablet / Laptop / 100%) */}
+            <div className="flex items-center gap-1 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-xl">
+              {devicePresets.map((preset) => {
+                const Icon = preset.icon;
+                const isActive = previewWidth === preset.width;
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => setPreviewWidth(preset.width)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-[#EA580C] text-white shadow-xs font-semibold'
+                        : 'text-neutral-400 hover:text-neutral-200'
+                    }`}
+                    title={preset.label}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span className="hidden lg:inline text-[11px]">
+                      {preset.id.charAt(0).toUpperCase() + preset.id.slice(1)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Right: Drag to Stretch Hint */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-neutral-400">
+              <span className="text-[11px] text-neutral-500 font-sans flex items-center gap-1">
+                <span>↔ Drag sides to stretch</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Main Stretchable Canvas Workspace */}
+          <div className="flex-1 w-full h-full relative overflow-hidden flex items-center justify-center p-3 sm:p-4">
+            <div
+              ref={previewFrameRef}
+              className={`relative h-full flex flex-col transition-[width] duration-75 ease-out ${
+                isResizingPreview ? 'transition-none select-none' : ''
+              }`}
+              style={{
+                width: previewWidth === '100%' ? '100%' : `${previewWidth}px`,
+                maxWidth: '100%',
+              }}
+            >
+              {/* Floating Live Dimension Pill while Dragging */}
+              {isResizingPreview && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-full bg-[#EA580C] text-white text-xs font-mono font-bold shadow-xl flex items-center gap-1.5 animate-in fade-in zoom-in-95 pointer-events-none">
+                  <span>↔</span>
+                  <span>{previewWidth === '100%' ? '100% (Responsive)' : `${previewWidth}px`}</span>
+                </div>
+              )}
+
+              {/* LEFT RESIZE HANDLE */}
+              <div
+                onMouseDown={(e) => handleStartPreviewResize(e, 'left')}
+                onDoubleClick={() => setPreviewWidth('100%')}
+                title="Drag left side to stretch width (double-click to reset 100%)"
+                className={`absolute -left-3.5 top-0 bottom-0 w-7 z-40 cursor-ew-resize flex items-center justify-center group select-none ${
+                  isResizingPreview === 'left' ? 'opacity-100' : ''
+                }`}
+              >
+                {/* Visual tactile grip pill */}
+                <div
+                  className={`w-1.5 h-16 rounded-full transition-all duration-150 flex items-center justify-center shadow-lg ${
+                    isResizingPreview === 'left'
+                      ? 'bg-[#EA580C] scale-110 h-20 shadow-[#EA580C]/40 ring-4 ring-[#EA580C]/20'
+                      : 'bg-neutral-600/80 group-hover:bg-[#EA580C] group-hover:h-20 group-hover:w-2'
+                  }`}
+                >
+                  <GripVertical className="w-2.5 h-2.5 text-white/80 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+
+              {/* RIGHT RESIZE HANDLE */}
+              <div
+                onMouseDown={(e) => handleStartPreviewResize(e, 'right')}
+                onDoubleClick={() => setPreviewWidth('100%')}
+                title="Drag right side to stretch width (double-click to reset 100%)"
+                className={`absolute -right-3.5 top-0 bottom-0 w-7 z-40 cursor-ew-resize flex items-center justify-center group select-none ${
+                  isResizingPreview === 'right' ? 'opacity-100' : ''
+                }`}
+              >
+                {/* Visual tactile grip pill */}
+                <div
+                  className={`w-1.5 h-16 rounded-full transition-all duration-150 flex items-center justify-center shadow-lg ${
+                    isResizingPreview === 'right'
+                      ? 'bg-[#EA580C] scale-110 h-20 shadow-[#EA580C]/40 ring-4 ring-[#EA580C]/20'
+                      : 'bg-neutral-600/80 group-hover:bg-[#EA580C] group-hover:h-20 group-hover:w-2'
+                  }`}
+                >
+                  <GripVertical className="w-2.5 h-2.5 text-white/80 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              </div>
+
+              {/* Main Rounded Canvas Area (Pure Black OLED Container) */}
+              <div
+                className={`flex-1 w-full h-full rounded-2xl md:rounded-3xl border relative overflow-hidden flex flex-col shadow-2xl ${
+                  isDarkMode ? 'border-[#171717] bg-[#050505]' : 'border-gray-200 bg-gray-100'
+                } ${isResizingPreview ? 'ring-2 ring-[#EA580C]/50' : ''}`}
+              >
             {project ? (
               viewTab === 'preview' ? (
                 /* Live Interactive Sandboxed Iframe */
@@ -955,6 +1153,8 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
       {/* ======================================================== */}
       {/* MOBILE BOTTOM NAVIGATION BAR (Exact Match to Image 1 & 2!) */}
@@ -1047,6 +1247,14 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
             className="w-full flex-1 border-none bg-white"
           />
         </div>
+      )}
+
+      {/* Fullscreen transparent drag shield to prevent iframe from trapping mouse events during stretching */}
+      {(isResizingPreview !== null || isResizingSidebar) && (
+        <div
+          className="fixed inset-0 z-[9999] cursor-ew-resize select-none bg-transparent"
+          style={{ userSelect: 'none', pointerEvents: 'auto' }}
+        />
       )}
     </div>
   );

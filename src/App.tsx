@@ -636,7 +636,8 @@ export function App() {
               {
                 id: `act_${Date.now()}_1`,
                 type: 'command',
-                title: 'Making the AI send live progress right away.',
+                title: 'Analyze Patch Request & Architecture',
+                detail: 'Identified targeted modifications and planned updates.',
                 status: 'completed',
               },
               {
@@ -644,12 +645,14 @@ export function App() {
                 type: 'edit',
                 title: `Updated ${parsedFiles[0].path}`,
                 fileName: parsedFiles[0].path,
+                detail: 'Applied requested modifications and updated layout.',
                 status: 'completed',
               },
               {
                 id: `act_${Date.now()}_3`,
                 type: 'test',
-                title: 'Testing that progress now streams immediately.',
+                title: 'Mount Sandboxed Live Preview & Runtime Verification',
+                detail: 'Sandboxed preview refreshed with updated changes.',
                 status: 'completed',
               },
             ];
@@ -670,22 +673,22 @@ export function App() {
             {
               id: `act_${Date.now()}_1`,
               type: 'command',
-              title: 'Making the AI send live progress right away.',
+              title: 'Analyze Requirements & Layout Architecture',
               detail: 'Structured semantic layout and initialized design tokens.',
               status: 'completed',
             },
             {
               id: `act_${Date.now()}_2`,
               type: 'edit',
-              title: 'Created index.html',
-              fileName: 'index.html',
-              detail: 'Generated full application codebase.',
+              title: `Synthesized ${parsedFiles[0]?.path || 'index.html'}`,
+              fileName: parsedFiles[0]?.path || 'index.html',
+              detail: 'Generated full application codebase with modern Tailwind styling.',
               status: 'completed',
             },
             {
               id: `act_${Date.now()}_3`,
               type: 'test',
-              title: 'Testing that progress now streams immediately.',
+              title: 'Mount Sandboxed Live Preview & Runtime Verification',
               detail: 'Sandbox mounted and runtime verified.',
               status: 'completed',
             },
@@ -1035,19 +1038,27 @@ export function App() {
                         </div>
                       </div>
                     ) : (
-                      currentConversation.messages.map((msg, idx) => (
-                        <ChatMessage
-                          key={msg.id}
-                          message={msg}
-                          onRetry={idx > 0 ? () => handleRetry(idx) : undefined}
-                          onOpenPreview={(proj) => {
-                            setActiveProject(proj);
-                            setActiveMode('website');
-                          }}
-                          readAloudEnabled={settings.readResponsesAloud}
-                          profile={settings.profile}
-                        />
-                      ))
+                      currentConversation.messages.map((msg, idx) => {
+                        // Find the most recent user message before this message for accurate agent step generation
+                        const precedingUserMsg = currentConversation.messages
+                          .slice(0, idx)
+                          .reverse()
+                          .find((m) => m.role === 'user');
+                        return (
+                          <ChatMessage
+                            key={msg.id}
+                            message={msg}
+                            onRetry={idx > 0 ? () => handleRetry(idx) : undefined}
+                            onOpenPreview={(proj) => {
+                              setActiveProject(proj);
+                              setActiveMode('website');
+                            }}
+                            readAloudEnabled={settings.readResponsesAloud}
+                            profile={settings.profile}
+                            userPrompt={precedingUserMsg?.content}
+                          />
+                        );
+                      })
                     )}
                     <div ref={messagesEndRef} />
                   </div>

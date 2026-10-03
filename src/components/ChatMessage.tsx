@@ -27,6 +27,7 @@ interface ChatMessageProps {
   onOpenPreview?: (project: GeneratedProject) => void;
   readAloudEnabled?: boolean;
   profile?: import('../types').UserProfile;
+  userPrompt?: string;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -35,6 +36,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   onOpenPreview,
   readAloudEnabled = true,
   profile,
+  userPrompt,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -234,6 +236,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   {/* Agent Execution Plan Component in Chat Section */}
                   {(message.thought || stepsToDisplay.length > 0 || message.isStreaming) && (
                     <AgentActionTree
+                      prompt={userPrompt}
                       code={message.content}
                       steps={stepsToDisplay}
                       thought={message.thought}

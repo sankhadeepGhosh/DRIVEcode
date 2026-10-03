@@ -42,184 +42,126 @@ export interface PlanProps {
 export const initialTasks: Task[] = [
   {
     id: "1",
-    title: "Research Project Requirements",
-    description:
-      "Gather all necessary information about project scope and requirements",
-    status: "in-progress",
+    title: "Analyze Requirements & Architecture",
+    description: "Extract specifications from user prompt, formulate component layout, and configure design tokens.",
+    status: "completed",
     priority: "high",
     level: 0,
     dependencies: [],
     subtasks: [
       {
         id: "1.1",
-        title: "Interview stakeholders",
-        description:
-          "Conduct interviews with key stakeholders to understand needs",
+        title: "Parse user specifications & layout requirements",
+        description: "Extracted intent, functional requirements, and structured component boundaries.",
         status: "completed",
         priority: "high",
-        tools: ["communication-agent", "meeting-scheduler"],
       },
       {
         id: "1.2",
-        title: "Review existing documentation",
-        description:
-          "Go through all available documentation and extract requirements",
-        status: "in-progress",
+        title: "Initialize design tokens & typography scale",
+        description: "Configured Tailwind CSS utility palette, fluid typography, and responsive spacing scale.",
+        status: "completed",
         priority: "medium",
-        tools: ["file-system", "browser"],
-      },
-      {
-        id: "1.3",
-        title: "Compile findings report",
-        description:
-          "Create a comprehensive report of all gathered information",
-        status: "need-help",
-        priority: "medium",
-        tools: ["file-system", "markdown-processor"],
       },
     ],
   },
   {
     id: "2",
-    title: "Design System Architecture",
-    description: "Create the overall system architecture based on requirements",
-    status: "in-progress",
+    title: "Synthesize Semantic HTML5 Structure",
+    description: "Construct accessible DOM tree, responsive viewport meta, and semantic page regions.",
+    status: "completed",
     priority: "high",
     level: 0,
-    dependencies: [],
+    dependencies: ["1"],
     subtasks: [
       {
         id: "2.1",
-        title: "Define component structure",
-        description: "Map out all required components and their interactions",
-        status: "pending",
+        title: "Scaffold document head, viewport meta & CDN resources",
+        description: "Configured UTF-8 charset, responsive mobile viewport, Google Fonts CDN, and Tailwind CDN.",
+        status: "completed",
         priority: "high",
-        tools: ["architecture-planner", "diagramming-tool"],
       },
       {
         id: "2.2",
-        title: "Create data flow diagrams",
-        description:
-          "Design diagrams showing how data will flow through the system",
-        status: "pending",
-        priority: "medium",
-        tools: ["diagramming-tool", "file-system"],
-      },
-      {
-        id: "2.3",
-        title: "Document API specifications",
-        description: "Write detailed specifications for all APIs in the system",
-        status: "pending",
+        title: "Construct semantic layout & accessible content regions",
+        description: "Built accessible semantic landmarks (<nav>, <main>, <section>, <footer>) and responsive grid wrappers.",
+        status: "completed",
         priority: "high",
-        tools: ["api-designer", "openapi-generator"],
       },
     ],
   },
   {
     id: "3",
-    title: "Implementation Planning",
-    description: "Create a detailed plan for implementing the system",
-    status: "pending",
-    priority: "medium",
+    title: "Apply Modern Tailwind Styling & Visual Hierarchy",
+    description: "Incorporate mobile-first utility classes, fluid spacing, visual accents, and responsive layout hierarchy.",
+    status: "completed",
+    priority: "high",
     level: 1,
-    dependencies: ["1", "2"],
+    dependencies: ["2"],
     subtasks: [
       {
         id: "3.1",
-        title: "Resource allocation",
-        description: "Determine required resources and allocate them to tasks",
-        status: "pending",
-        priority: "medium",
-        tools: ["project-manager", "resource-calculator"],
+        title: "Configure responsive utility classes & fluid typography",
+        description: "Applied mobile (sm: 640px), tablet (md: 768px), and desktop (lg: 1024px) responsive breakpoints.",
+        status: "completed",
+        priority: "high",
       },
       {
         id: "3.2",
-        title: "Timeline development",
-        description: "Create a timeline with milestones and deadlines",
-        status: "pending",
-        priority: "high",
-        tools: ["timeline-generator", "gantt-chart-creator"],
-      },
-      {
-        id: "3.3",
-        title: "Risk assessment",
-        description:
-          "Identify potential risks and develop mitigation strategies",
-        status: "pending",
+        title: "Apply visual accents, shadows & vector icons",
+        description: "Injected gradient overlays, subtle shadows, clean borders, and Lucide vector icons.",
+        status: "completed",
         priority: "medium",
-        tools: ["risk-analyzer"],
       },
     ],
   },
   {
     id: "4",
-    title: "Development Environment Setup",
-    description: "Set up all necessary tools and environments for development",
-    status: "in-progress",
-    priority: "high",
-    level: 0,
-    dependencies: [],
+    title: "Inject Client-Side Interactivity & State Handlers",
+    description: "Attach vanilla JavaScript logic for dynamic user interactions, button events, state toggles, and form controls.",
+    status: "completed",
+    priority: "medium",
+    level: 1,
+    dependencies: ["3"],
     subtasks: [
       {
         id: "4.1",
-        title: "Install development tools",
-        description:
-          "Set up IDEs, version control, and other necessary development tools",
-        status: "pending",
+        title: "Initialize interactive event listeners & UI bindings",
+        description: "Bound DOM event listeners via addEventListener for keyboard and touch-accessible interactions.",
+        status: "completed",
         priority: "high",
-        tools: ["shell", "package-manager"],
       },
       {
         id: "4.2",
-        title: "Configure CI/CD pipeline",
-        description: "Set up continuous integration and deployment pipelines",
-        status: "pending",
+        title: "Initialize state handlers & Lucide icon runtime",
+        description: "Verified client-side state transitions and invoked lucide.createIcons() to render dynamic vector icons.",
+        status: "completed",
         priority: "medium",
-        tools: ["github-actions", "gitlab-ci", "jenkins-connector"],
-      },
-      {
-        id: "4.3",
-        title: "Set up testing framework",
-        description: "Configure automated testing frameworks for the project",
-        status: "pending",
-        priority: "high",
-        tools: ["test-runner", "shell"],
       },
     ],
   },
   {
     id: "5",
-    title: "Initial Development Sprint",
-    description: "Execute the first development sprint based on the plan",
-    status: "pending",
-    priority: "medium",
+    title: "Mount Sandboxed Live Preview & Runtime Verification",
+    description: "Bundle complete index.html into isolated iframe sandbox and verify live execution.",
+    status: "completed",
+    priority: "high",
     level: 1,
     dependencies: ["4"],
     subtasks: [
       {
         id: "5.1",
-        title: "Implement core features",
-        description:
-          "Develop the essential features identified in the requirements",
-        status: "pending",
+        title: "Bundle & mount index.html into isolated iframe sandbox",
+        description: "Injected complete HTML5 payload with Tailwind styles and scripts into sandboxed iframe runtime.",
+        status: "completed",
         priority: "high",
-        tools: ["code-assistant", "github", "file-system", "shell"],
       },
       {
         id: "5.2",
-        title: "Perform unit testing",
-        description: "Create and execute unit tests for implemented features",
-        status: "pending",
+        title: "Verify zero console errors & validate rendering",
+        description: "Validated clean runtime execution with zero syntax errors. Mounted live interactive preview.",
+        status: "completed",
         priority: "medium",
-        tools: ["test-runner", "code-coverage-analyzer"],
-      },
-      {
-        id: "5.3",
-        title: "Document code",
-        description: "Create documentation for the implemented code",
-        status: "pending",
-        priority: "low",
-        tools: ["documentation-generator", "markdown-processor"],
       },
     ],
   },
@@ -231,10 +173,26 @@ export default function Plan({
   className = "",
 }: PlanProps = {}) {
   const [tasks, setTasks] = useState<Task[]>(propTasks || initialTasks);
-  const [expandedTasks, setExpandedTasks] = useState<string[]>(["1"]);
+  const [expandedTasks, setExpandedTasks] = useState<string[]>(() => {
+    const list = propTasks || initialTasks;
+    return list.map((t) => t.id);
+  });
   const [expandedSubtasks, setExpandedSubtasks] = useState<{
     [key: string]: boolean;
   }>({});
+
+  // Sync internal tasks state when propTasks change (e.g. during streaming)
+  React.useEffect(() => {
+    if (propTasks && propTasks.length > 0) {
+      setTasks(propTasks);
+
+      // Auto-expand all tasks with subtasks so user sees the full steps tree
+      setExpandedTasks((prev) => {
+        const allIds = propTasks.map((t) => t.id);
+        return Array.from(new Set([...prev, ...allIds]));
+      });
+    }
+  }, [propTasks]);
   // Add support for reduced motion preference
   const prefersReducedMotion = 
     typeof window !== 'undefined' 
@@ -329,12 +287,9 @@ export default function Plan({
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { 
-        type: prefersReducedMotion ? "tween" : "spring", 
-        stiffness: 500, 
-        damping: 30,
-        duration: prefersReducedMotion ? 0.2 : undefined
-      }
+      transition: prefersReducedMotion
+        ? { type: "tween" as const, duration: 0.2 }
+        : { type: "spring" as const, stiffness: 500, damping: 30 }
     },
     exit: {
       opacity: 0,
@@ -347,26 +302,26 @@ export default function Plan({
     hidden: { 
       opacity: 0, 
       height: 0,
-      overflow: "hidden" 
+      overflow: "hidden" as const
     },
     visible: { 
-      height: "auto", 
+      height: "auto" as const, 
       opacity: 1,
-      overflow: "visible",
+      overflow: "visible" as const,
       transition: { 
         duration: 0.25, 
         staggerChildren: prefersReducedMotion ? 0 : 0.05,
-        when: "beforeChildren",
-        ease: [0.2, 0.65, 0.3, 0.9] // Custom easing curve for Apple-like feel
+        when: "beforeChildren" as const,
+        ease: [0.2, 0.65, 0.3, 0.9] as [number, number, number, number]
       }
     },
     exit: {
       height: 0,
       opacity: 0,
-      overflow: "hidden",
+      overflow: "hidden" as const,
       transition: { 
         duration: 0.2,
-        ease: [0.2, 0.65, 0.3, 0.9]
+        ease: [0.2, 0.65, 0.3, 0.9] as [number, number, number, number]
       }
     }
   };
@@ -379,12 +334,9 @@ export default function Plan({
     visible: { 
       opacity: 1, 
       x: 0,
-      transition: { 
-        type: prefersReducedMotion ? "tween" : "spring", 
-        stiffness: 500, 
-        damping: 25,
-        duration: prefersReducedMotion ? 0.2 : undefined
-      }
+      transition: prefersReducedMotion
+        ? { type: "tween" as const, duration: 0.2 }
+        : { type: "spring" as const, stiffness: 500, damping: 25 }
     },
     exit: {
       opacity: 0,
@@ -397,15 +349,15 @@ export default function Plan({
     hidden: { 
       opacity: 0, 
       height: 0,
-      overflow: "hidden"
+      overflow: "hidden" as const
     },
     visible: { 
       opacity: 1, 
-      height: "auto",
-      overflow: "visible",
+      height: "auto" as const,
+      overflow: "visible" as const,
       transition: { 
         duration: 0.25,
-        ease: [0.2, 0.65, 0.3, 0.9]
+        ease: [0.2, 0.65, 0.3, 0.9] as [number, number, number, number]
       }
     }
   };
@@ -417,15 +369,19 @@ export default function Plan({
       scale: prefersReducedMotion ? 1 : [1, 1.08, 1],
       transition: { 
         duration: 0.35,
-        ease: [0.34, 1.56, 0.64, 1] // Springy custom easing for bounce effect
+        ease: [0.34, 1.56, 0.64, 1] as [number, number, number, number]
       }
     }
   };
 
   return (
-    <div className={`bg-background text-foreground h-full overflow-auto p-2 ${className}`}>
+    <div className={`bg-background text-foreground w-full ${className}`}>
       <motion.div 
-        className="bg-card border-border rounded-lg border shadow overflow-hidden"
+        className={`rounded-xl overflow-hidden ${
+          className.includes('border-none')
+            ? 'bg-transparent'
+            : 'bg-card border border-border shadow-xs'
+        }`}
         initial={{ opacity: 0, y: 10 }}
         animate={{ 
           opacity: 1, 
@@ -500,7 +456,11 @@ export default function Plan({
                       >
                         <div className="mr-2 flex-1 truncate">
                           <span
-                            className={`${isCompleted ? "text-muted-foreground line-through" : ""}`}
+                            className={`text-xs sm:text-sm font-semibold tracking-tight ${
+                              isCompleted
+                                ? "text-muted-foreground line-through font-normal"
+                                : "text-foreground"
+                            }`}
                           >
                             {task.title}
                           </span>
@@ -632,7 +592,11 @@ export default function Plan({
                                     </motion.div>
 
                                     <span
-                                      className={`cursor-pointer text-sm ${subtask.status === "completed" ? "text-muted-foreground line-through" : ""}`}
+                                      className={`cursor-pointer text-xs sm:text-sm font-medium ${
+                                        subtask.status === "completed"
+                                          ? "text-muted-foreground line-through font-normal"
+                                          : "text-foreground"
+                                      }`}
                                     >
                                       {subtask.title}
                                     </span>

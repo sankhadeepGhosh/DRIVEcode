@@ -18,6 +18,7 @@ interface AgentActionTreeProps {
   thought?: string;
   thoughtDuration?: number;
   isStreaming?: boolean;
+  elapsedSeconds?: number;
   className?: string;
 }
 
@@ -30,6 +31,7 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
   thought,
   thoughtDuration,
   isStreaming = false,
+  elapsedSeconds,
   className = '',
 }) => {
   const [thoughtOpen, setThoughtOpen] = useState(false);
@@ -50,6 +52,8 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
     };
   }, [isStreaming]);
 
+  const activeElapsed = elapsedSeconds !== undefined ? elapsedSeconds : streamSeconds;
+
   const hasThought = Boolean(thought && thought.trim());
   const effectiveDuration =
     thoughtDuration ||
@@ -63,10 +67,10 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
       prompt: prompt || 'Build a modern interactive web application',
       code: code || '',
       isStreaming,
-      elapsedSeconds: streamSeconds,
+      elapsedSeconds: activeElapsed,
       fileName,
     });
-  }, [tasks, prompt, code, isStreaming, streamSeconds, fileName]);
+  }, [tasks, prompt, code, isStreaming, activeElapsed, fileName]);
 
   const hasAnyPlan = planTasks.length > 0;
   const completedCount = planTasks.filter((t) => t.status === 'completed').length;
@@ -78,18 +82,18 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
         <div className="text-xs">
           <button
             onClick={() => hasThought && setThoughtOpen(!thoughtOpen)}
-            className="flex items-center gap-1.5 py-1 px-2 rounded-lg text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer select-none text-[11px] font-mono bg-neutral-900/50 hover:bg-neutral-900 border border-neutral-800"
+            className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none text-[11px] font-mono bg-muted/60 hover:bg-muted border border-border"
           >
             <Clock className="w-3 h-3 text-[#EA580C]" />
             <span>Thought for {effectiveDuration}s</span>
             {hasThought && (
-              thoughtOpen ? <ChevronUp className="w-3 h-3 text-neutral-500" /> : <ChevronDown className="w-3 h-3 text-neutral-500" />
+              thoughtOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />
             )}
           </button>
 
           {/* Expanded Thought Reasoning Content */}
           {hasThought && thoughtOpen && (
-            <div className="mt-1.5 ml-2 pl-3 border-l-2 border-[#EA580C]/40 text-[11px] text-neutral-300 font-mono italic leading-relaxed py-2 bg-black/60 rounded-r-xl max-h-56 overflow-y-auto custom-scrollbar whitespace-pre-wrap select-text border border-neutral-800">
+            <div className="mt-1.5 ml-2 pl-3 border-l-2 border-[#EA580C]/40 text-[11px] text-foreground font-mono italic leading-relaxed py-2 bg-card/90 rounded-r-xl max-h-56 overflow-y-auto custom-scrollbar whitespace-pre-wrap select-text border border-border">
               {thought}
             </div>
           )}
@@ -98,8 +102,8 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
 
       {/* 2. Structured Agent Plan Component in Chat */}
       {hasAnyPlan && (
-        <div className="w-full rounded-2xl border border-border bg-card/90 shadow-xs overflow-hidden">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-muted/40">
+        <div className="w-full rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted/40">
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-[#EA580C]" />
               <span className="text-xs font-semibold text-foreground">
@@ -107,7 +111,7 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EA580C]/15 text-[#EA580C] font-mono font-medium">
                 {isStreaming
-                  ? `Active Step · ${streamSeconds}s`
+                  ? `Active Step · ${activeElapsed}s`
                   : `${completedCount}/${planTasks.length} Completed`}
               </span>
             </div>
@@ -121,8 +125,8 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
           </div>
 
           {planOpen && (
-            <div className="p-2 sm:p-3 overflow-x-hidden">
-              <Plan initialTasks={planTasks} title="Agent Action Plan" className="p-0 max-w-full" />
+            <div className="p-1 sm:p-2 overflow-x-hidden">
+              <Plan initialTasks={planTasks} title="Agent Action Plan" className="p-0 max-w-full border-none shadow-none" />
             </div>
           )}
         </div>
