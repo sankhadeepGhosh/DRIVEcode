@@ -280,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3.5 border-b border-[var(--rose-border)] space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-serif font-bold text-[var(--rose-text)] tracking-wider text-base">ROSE</span>
+              <span className="font-serif font-bold text-[var(--rose-text)] tracking-wider text-base">DRIVEcode</span>
             </div>
             <button
               onClick={onClose}

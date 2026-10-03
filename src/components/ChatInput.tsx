@@ -199,7 +199,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             placeholder={
               isResearchActive
                 ? 'Ask anything for real-time web research & citation...'
-                : 'Message ROSE or ask to build a website...'
+                : 'Message DRIVEcode or ask to build a website...'
             }
             className="w-full resize-none bg-transparent text-sm text-[var(--rose-text)] placeholder:text-[var(--rose-text-muted)] focus:outline-none max-h-40 leading-relaxed"
           />

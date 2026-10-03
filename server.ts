@@ -43,7 +43,7 @@ function getGeminiClient(userKey?: string): GoogleGenAI | null {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    app: 'ROSE AI Master Multi-Model',
+    app: 'DRIVEcode AI Master Multi-Model',
     version: '3.0.0',
     hasSystemApiKey: Boolean(process.env.GEMINI_API_KEY),
     hasOpenRouterApiKey: Boolean(process.env.OPENROUTER_API_KEY),
@@ -61,7 +61,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-const ROSE_BASE_SYSTEM_INSTRUCTION = `You are ROSE, a brilliant, thoughtful, articulate, and empathetic personal AI companion and assistant.
+const DRIVECODE_BASE_SYSTEM_INSTRUCTION = `You are DRIVEcode, a brilliant, thoughtful, articulate, and empathetic personal AI companion and assistant.
 Your style:
 - Natural, conversational, insightful, and warmly engaging.
 - You format responses beautifully with clear paragraphs, Markdown headers, bullet points when organizing, and clean syntax-highlighted code blocks when programming.
@@ -140,7 +140,7 @@ app.post('/api/research/search', async (req, res) => {
     // 1. Query DuckDuckGo Instant Answer API
     try {
       const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
-      const ddgResp = await fetch(ddgUrl, { headers: { 'User-Agent': 'ROSE-Deep-Research-Agent/1.0' } });
+      const ddgResp = await fetch(ddgUrl, { headers: { 'User-Agent': 'DRIVEcode-Deep-Research-Agent/1.0' } });
       if (ddgResp.ok) {
         const data = await ddgResp.json();
         if (data.AbstractText && data.AbstractURL) {
@@ -169,13 +169,13 @@ app.post('/api/research/search', async (req, res) => {
         }
       }
     } catch (e) {
-      console.warn('[ROSE Server] DuckDuckGo search error:', e);
+      console.warn('[DRIVEcode Server] DuckDuckGo search error:', e);
     }
 
     // 2. Query Wikipedia OpenSearch API for authoritative encyclopedia grounding
     try {
       const wikiUrl = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=3&namespace=0&format=json`;
-      const wikiResp = await fetch(wikiUrl, { headers: { 'User-Agent': 'ROSE-Deep-Research-Agent/1.0' } });
+      const wikiResp = await fetch(wikiUrl, { headers: { 'User-Agent': 'DRIVEcode-Deep-Research-Agent/1.0' } });
       if (wikiResp.ok) {
         const wikiData = await wikiResp.json();
         const titles = wikiData[1] || [];
@@ -194,7 +194,7 @@ app.post('/api/research/search', async (req, res) => {
         }
       }
     } catch (e) {
-      console.warn('[ROSE Server] Wikipedia search error:', e);
+      console.warn('[DRIVEcode Server] Wikipedia search error:', e);
     }
 
     // If no results returned from public APIs, provide a structured web query card
@@ -225,7 +225,7 @@ async function streamOpenRouter(
   res: express.Response
 ) {
   const messages: any[] = [];
-  messages.push({ role: 'system', content: ROSE_BASE_SYSTEM_INSTRUCTION });
+  messages.push({ role: 'system', content: DRIVECODE_BASE_SYSTEM_INSTRUCTION });
 
   const recentHistory = Array.isArray(history) ? history.slice(-8) : [];
   for (const msg of recentHistory) {
@@ -279,7 +279,7 @@ async function streamOpenRouter(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${openRouterApiKey}`,
       'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
-      'X-Title': 'ROSE AI Assistant',
+      'X-Title': 'DRIVEcode AI Assistant',
     },
     body: JSON.stringify(payload),
   });
@@ -360,7 +360,7 @@ app.post('/api/chat', async (req, res) => {
   } else if (tone === 'concise') {
     toneAddition = ' Tone guideline: Be exceptionally crisp, direct, and brief without sacrificing substance.';
   }
-  const systemInstruction = ROSE_BASE_SYSTEM_INSTRUCTION + toneAddition;
+  const systemInstruction = DRIVECODE_BASE_SYSTEM_INSTRUCTION + toneAddition;
 
   // 1. If OpenRouter model selected
   const isOpenRouterModel =
@@ -488,7 +488,7 @@ app.post('/api/chat', async (req, res) => {
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
         if (!errMsg.includes('503') && !errMsg.includes('high demand')) {
-          console.warn(`[ROSE Server] Gemini ${modelName} fallback attempt: ${errMsg.slice(0, 80)}`);
+          console.warn(`[DRIVEcode Server] Gemini ${modelName} fallback attempt: ${errMsg.slice(0, 80)}`);
         }
       }
     }
@@ -561,7 +561,7 @@ async function initServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[ROSE AI] Master Multi-Model Server running on http://localhost:${PORT}`);
+    console.log(`[DRIVEcode AI] Master Multi-Model Server running on http://localhost:${PORT}`);
   });
 }
 

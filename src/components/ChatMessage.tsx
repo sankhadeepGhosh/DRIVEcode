@@ -113,7 +113,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               <span className="font-semibold text-gray-600">
                 {message.modelUsed === 'gemini-3.1-flash-lite'
                   ? 'Gemini 3.1 Flash-Lite'
-                  : message.modelUsed?.split('/')[1]?.split(':')[0] || 'ROSE'}
+                  : message.modelUsed?.split('/')[1]?.split(':')[0] || 'DRIVEcode'}
               </span>
               {message.effortUsed && message.effortUsed !== 'auto' && (
                 <>

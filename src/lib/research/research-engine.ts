@@ -37,7 +37,7 @@ export class ResearchEngine {
   static formatResearchPrompt(query: string, sources: ResearchSource[]): string {
     const sourcesContext = sources.map((s, idx) => `[Source ${idx + 1}] Title: ${s.title} (${s.domain})\nURL: ${s.url}\nExcerpt: ${s.snippet}`).join('\n\n');
 
-    return `You are ROSE in DEEP RESEARCH MODE. The user has requested a comprehensive, fact-grounded investigation into:
+    return `You are DRIVEcode in DEEP RESEARCH MODE. The user has requested a comprehensive, fact-grounded investigation into:
 "${query}"
 
 Below is real-time web retrieval context gathered from ${sources.length} active web sources:

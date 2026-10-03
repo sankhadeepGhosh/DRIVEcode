@@ -131,7 +131,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBypassAsGuest }) => {
 
           {/* Heading */}
           <h1 className="text-2xl font-serif font-bold text-[var(--rose-text,#1F2937)] dark:text-white tracking-wide">
-            ROSE
+            DRIVEcode
           </h1>
           <p className="text-sm text-[var(--rose-text-muted,#6B7280)] dark:text-[#94A3B8] mb-6 mt-1">
             Your personal AI assistant.

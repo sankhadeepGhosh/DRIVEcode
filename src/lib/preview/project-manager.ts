@@ -77,7 +77,7 @@ export class WebsiteBuilder {
     if (existingProject) {
       const existingFilesSummary = existingProject.files.map((f) => `=== FILE: ${f.path} ===\n${f.content}`).join('\n\n');
 
-      return `You are ROSE Website Builder Engine.
+      return `You are DRIVEcode Website Builder Engine.
 The user wants to iterate on an existing website project.
 
 EXISTING FILES:
@@ -102,7 +102,7 @@ or for other files:
 Always ensure index.html is complete and ready to render in an isolated sandboxed iframe.`;
     }
 
-    return `You are ROSE Website Builder Engine.
+    return `You are DRIVEcode Website Builder Engine.
 The user has requested to build a website:
 "${userPrompt}"
 
