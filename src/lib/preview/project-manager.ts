@@ -155,13 +155,29 @@ Ensure the generated code is 100% complete and self-contained with no omitted sn
       });
     }
 
-    // Fallback: If no fenced files were captured with filename, extract any html codeblock
+    // Fallback 1: If no fenced files were captured with filename, extract any html codeblock
     if (files.length === 0) {
-      const htmlBlockMatch = responseText.match(/```html\n([\s\S]*?)```/);
-      if (htmlBlockMatch && htmlBlockMatch[1]) {
+      const htmlBlockMatch = responseText.match(/```(?:html)?\s*\n([\s\S]*?)```/i);
+      if (htmlBlockMatch && htmlBlockMatch[1] && (htmlBlockMatch[1].includes('<html') || htmlBlockMatch[1].includes('<!DOCTYPE') || htmlBlockMatch[1].includes('<div'))) {
         files.push({
           path: 'index.html',
           content: htmlBlockMatch[1].trim(),
+        });
+      }
+    }
+
+    // Fallback 2: Direct raw HTML detection if model returned unwrapped HTML markup
+    if (files.length === 0) {
+      const lower = responseText.toLowerCase();
+      const doctypeIdx = lower.indexOf('<!doctype html');
+      const htmlIdx = lower.indexOf('<html');
+      const startIdx = doctypeIdx !== -1 ? doctypeIdx : htmlIdx;
+      if (startIdx !== -1) {
+        const endIdx = lower.lastIndexOf('</html>');
+        const rawContent = endIdx !== -1 ? responseText.slice(startIdx, endIdx + 7) : responseText.slice(startIdx);
+        files.push({
+          path: 'index.html',
+          content: rawContent.trim(),
         });
       }
     }

@@ -24,7 +24,9 @@ import {
   Clock,
   Layers,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 import { GeneratedProject, Message } from '../types';
 import { WebsiteBuilder } from '../lib/preview/project-manager';
@@ -169,12 +171,22 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   const sandboxHtml = project ? WebsiteBuilder.generateSandboxHtml(project.files) : '';
   const currentCode = project?.files?.[0]?.content || '';
 
-  // Filter messages relevant to website iterations
+  // Filter messages relevant to website iterations (including error and streaming states)
   const websiteMessages = messages.filter(
     (m) =>
       m.role === 'user' ||
-      (m.role === 'assistant' && (m.content.includes('<!DOCTYPE html') || m.content.includes('```html') || m.generatedProject))
+      (m.role === 'assistant' &&
+        (m.content.includes('<!DOCTYPE html') ||
+          m.content.includes('```html') ||
+          m.generatedProject ||
+          m.error ||
+          m.isStreaming))
   );
+
+  const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant');
+  const lastErrorMessage = lastAssistantMsg?.error
+    ? lastAssistantMsg.errorMessage || 'AI generation failed. Please configure your API key in Settings.'
+    : null;
 
   // Compute active building step based on elapsed time or completion
   const stepProgress = {
@@ -577,7 +589,9 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                       <div
                         key={msg.id}
                         className={`p-3 rounded-xl text-xs border space-y-2 ${
-                          msg.role === 'user'
+                          msg.error
+                            ? 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                            : msg.role === 'user'
                             ? isDarkMode
                               ? 'bg-[#080808] border-[#171717] text-neutral-300'
                               : 'bg-gray-50 border-gray-200 text-gray-800'
@@ -585,7 +599,11 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                         }`}
                       >
                         <div className="flex items-center gap-1.5 font-semibold text-[11px]">
-                          {msg.role === 'user' ? (
+                          {msg.error ? (
+                            <span className="text-rose-400 flex items-center gap-1">
+                              <AlertTriangle className="w-3.5 h-3.5" /> Generation Error
+                            </span>
+                          ) : msg.role === 'user' ? (
                             <span className="text-neutral-400">Prompt</span>
                           ) : (
                             <span className="text-[#EA580C] flex items-center gap-1">
@@ -595,7 +613,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                         </div>
 
                         {/* Collapsible Action Tree if available */}
-                        {msg.role === 'assistant' && (msg.thought || (msg.actionSteps && msg.actionSteps.length > 0)) && (
+                        {msg.role === 'assistant' && !msg.error && (msg.thought || (msg.actionSteps && msg.actionSteps.length > 0)) && (
                           <AgentActionTree
                             steps={msg.actionSteps}
                             thought={msg.thought}
@@ -603,15 +621,40 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                           />
                         )}
 
-                        <p className="leading-relaxed line-clamp-3">
-                          {msg.role === 'user'
-                            ? msg.content
-                            : msg.content
-                            ? msg.content.replace(/```[\s\S]*?```/g, '').trim()
-                            : project
-                            ? `Compiled "${project.title}" (${project.files.length} file)`
-                            : 'Generated code bundle'}
-                        </p>
+                        {msg.error ? (
+                          <div className="space-y-2 pt-0.5">
+                            <p className="leading-relaxed text-neutral-300">
+                              {msg.errorMessage || 'AI generation failed.'}
+                            </p>
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                onClick={onOpenSettings}
+                                className="px-2.5 py-1 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                              >
+                                Configure API Key
+                              </button>
+                              <button
+                                onClick={() => {
+                                  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+                                  if (lastUser) onBuild(lastUser.content);
+                                }}
+                                className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                              >
+                                Retry
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="leading-relaxed line-clamp-3">
+                            {msg.role === 'user'
+                              ? msg.content
+                              : msg.content
+                              ? msg.content.replace(/```[\s\S]*?```/g, '').trim()
+                              : project
+                              ? `Compiled "${project.title}" (${project.files.length} file)`
+                              : 'Generated code bundle'}
+                          </p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -749,6 +792,60 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                   </pre>
                 </div>
               )
+            ) : isBuilding ? (
+              /* Live Building Canvas State with animated pulse */
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-3xl bg-[#EA580C]/10 border border-[#EA580C]/30 flex items-center justify-center shadow-lg shadow-[#EA580C]/10 animate-pulse">
+                    <Loader2 className="w-8 h-8 text-[#EA580C] animate-spin" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 animate-ping" />
+                </div>
+                <div className="space-y-2 max-w-sm">
+                  <h3 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-neutral-100">
+                    Architecting Your Website...
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed">
+                    Generating responsive layout, modern Tailwind styles, and live interactive state handlers.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
+                  <Clock className="w-3.5 h-3.5 text-[#EA580C]" />
+                  <span>Elapsed: {elapsedSeconds}s</span>
+                </div>
+              </div>
+            ) : lastErrorMessage ? (
+              /* Actionable Canvas Error State */
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 max-w-md mx-auto animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shadow-sm">
+                  <AlertCircle className="w-7 h-7" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="font-serif text-lg sm:text-xl font-bold text-neutral-100">
+                    Website Generation Paused
+                  </h3>
+                  <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed">
+                    {lastErrorMessage}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 pt-3">
+                  <button
+                    onClick={onOpenSettings}
+                    className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                  >
+                    Open Settings & Add API Key
+                  </button>
+                  <button
+                    onClick={() => {
+                      const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+                      if (lastUser) onBuild(lastUser.content);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold border border-neutral-700 transition-all cursor-pointer"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
             ) : (
               /* Centered Empty State (Exact Match to Image 1!) */
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">

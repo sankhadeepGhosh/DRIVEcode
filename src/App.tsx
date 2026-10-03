@@ -38,6 +38,7 @@ import { WebsiteBuilder } from './lib/preview/project-manager';
 import { PatchAgent } from './lib/preview/patch-agent';
 import { UsageTracker } from './lib/usage-tracker';
 import { normalizeAIError } from './lib/ai/errors';
+import { DirectAIClient } from './lib/ai/direct-client';
 import { FONT_DEFINITIONS, FONT_SIZES, applyTypography } from './lib/fonts';
 
 export function App() {
@@ -425,125 +426,187 @@ export function App() {
           content: m.content.slice(0, 15000),
         }));
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: finalPrompt,
-          attachments: attachments.map((a) => ({
-            name: a.name,
-            type: a.type,
-            size: a.size,
-            dataUrl: a.dataUrl,
-            textContent: a.textContent,
-          })),
-          history,
-          tone: settings.tone,
-          modelId: route.modelId,
-          effort: route.effort,
-          geminiApiKey: credentials.geminiApiKey,
-          openRouterApiKey: credentials.openRouterApiKey,
-        }),
-        signal: abortController.signal,
-      });
+      let accumulatedResponse = '';
+      let accumulatedThought = '';
+      let usedDirectClient = false;
+      let response: Response | null = null;
 
-      if (!response.ok || !response.body) {
-        throw new Error(`Failed to connect to DRIVEcode stream (${response.status})`);
+      try {
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: finalPrompt,
+            attachments: attachments.map((a) => ({
+              name: a.name,
+              type: a.type,
+              size: a.size,
+              dataUrl: a.dataUrl,
+              textContent: a.textContent,
+            })),
+            history,
+            tone: settings.tone,
+            modelId: route.modelId,
+            effort: route.effort,
+            geminiApiKey: credentials.geminiApiKey,
+            openRouterApiKey: credentials.openRouterApiKey,
+          }),
+          signal: abortController.signal,
+        });
+
+        // 405 Method Not Allowed / 404 Not Found indicates Edge static hosting without backend
+        if (response.status === 405 || response.status === 404 || !response.ok) {
+          usedDirectClient = true;
+        }
+      } catch (err: any) {
+        if (err.name === 'AbortError') throw err;
+        usedDirectClient = true;
       }
 
       triggerAura('streaming');
       setProcessingStatus(null);
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedResponse = '';
-      let accumulatedThought = '';
+      if (usedDirectClient) {
+        // Stream directly from the browser using client credentials
+        await DirectAIClient.stream({
+          prompt: finalPrompt,
+          history,
+          attachments,
+          modelId: route.modelId,
+          effort: route.effort,
+          tone: settings.tone,
+          geminiApiKey: credentials.geminiApiKey,
+          openRouterApiKey: credentials.openRouterApiKey,
+          signal: abortController.signal,
+          onChunk: (chunkText) => {
+            accumulatedResponse += chunkText;
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.id === targetConvId) {
+                  return {
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === assistantMsgId ? { ...m, content: accumulatedResponse } : m
+                    ),
+                  };
+                }
+                return c;
+              })
+            );
+          },
+          onReasoningChunk: (reasoningChunk) => {
+            accumulatedThought += reasoningChunk;
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.id === targetConvId) {
+                  return {
+                    ...c,
+                    messages: c.messages.map((m) =>
+                      m.id === assistantMsgId
+                        ? {
+                            ...m,
+                            thought: accumulatedThought,
+                            thoughtDuration: Math.max(1, Math.round((Date.now() - startTime) / 1000)),
+                          }
+                        : m
+                    ),
+                  };
+                }
+                return c;
+              })
+            );
+          },
+        });
+      } else if (response && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        const chunkText = decoder.decode(value, { stream: true });
-        const lines = chunkText.split('\n');
+          const chunkText = decoder.decode(value, { stream: true });
+          const lines = chunkText.split('\n');
 
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith('data: ')) continue;
-          try {
-            const data = JSON.parse(trimmed.slice(6));
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data: ')) continue;
+            try {
+              const data = JSON.parse(trimmed.slice(6));
 
-            if (data.error) {
-              const normError = normalizeAIError(data.message, route.provider, route.modelId);
-              setConversations((prev) =>
-                prev.map((c) => {
-                  if (c.id === targetConvId) {
-                    return {
-                      ...c,
-                      messages: c.messages.map((m) =>
-                        m.id === assistantMsgId
-                          ? {
-                              ...m,
-                              content: '',
-                              isStreaming: false,
-                              error: true,
-                              errorMessage: normError.message,
-                            }
-                          : m
-                      ),
-                    };
-                  }
-                  return c;
-                })
-              );
-              triggerAura('error', 2500);
-              return;
+              if (data.error) {
+                const normError = normalizeAIError(data.message, route.provider, route.modelId);
+                setConversations((prev) =>
+                  prev.map((c) => {
+                    if (c.id === targetConvId) {
+                      return {
+                        ...c,
+                        messages: c.messages.map((m) =>
+                          m.id === assistantMsgId
+                            ? {
+                                ...m,
+                                content: '',
+                                isStreaming: false,
+                                error: true,
+                                errorMessage: normError.message,
+                              }
+                            : m
+                        ),
+                      };
+                    }
+                    return c;
+                  })
+                );
+                triggerAura('error', 2500);
+                return;
+              }
+
+              if (data.reasoningChunk) {
+                accumulatedThought += data.reasoningChunk;
+                setConversations((prev) =>
+                  prev.map((c) => {
+                    if (c.id === targetConvId) {
+                      return {
+                        ...c,
+                        messages: c.messages.map((m) =>
+                          m.id === assistantMsgId
+                            ? {
+                                ...m,
+                                thought: accumulatedThought,
+                                thoughtDuration: Math.max(1, Math.round((Date.now() - startTime) / 1000)),
+                              }
+                            : m
+                        ),
+                      };
+                    }
+                    return c;
+                  })
+                );
+              }
+
+              if (data.chunk) {
+                accumulatedResponse += data.chunk;
+                setConversations((prev) =>
+                  prev.map((c) => {
+                    if (c.id === targetConvId) {
+                      return {
+                        ...c,
+                        messages: c.messages.map((m) =>
+                          m.id === assistantMsgId ? { ...m, content: accumulatedResponse } : m
+                        ),
+                      };
+                    }
+                    return c;
+                  })
+                );
+              }
+
+              if (data.done) {
+                break;
+              }
+            } catch {
+              // ignore non-json keepalives
             }
-
-            if (data.reasoningChunk) {
-              accumulatedThought += data.reasoningChunk;
-              setConversations((prev) =>
-                prev.map((c) => {
-                  if (c.id === targetConvId) {
-                    return {
-                      ...c,
-                      messages: c.messages.map((m) =>
-                        m.id === assistantMsgId
-                          ? {
-                              ...m,
-                              thought: accumulatedThought,
-                              thoughtDuration: Math.max(1, Math.round((Date.now() - startTime) / 1000)),
-                            }
-                          : m
-                      ),
-                    };
-                  }
-                  return c;
-                })
-              );
-            }
-
-            if (data.chunk) {
-              accumulatedResponse += data.chunk;
-              setConversations((prev) =>
-                prev.map((c) => {
-                  if (c.id === targetConvId) {
-                    return {
-                      ...c,
-                      messages: c.messages.map((m) =>
-                        m.id === assistantMsgId ? { ...m, content: accumulatedResponse } : m
-                      ),
-                    };
-                  }
-                  return c;
-                })
-              );
-            }
-
-            if (data.done) {
-              break;
-            }
-          } catch {
-            // ignore non-json keepalives
           }
         }
       }
