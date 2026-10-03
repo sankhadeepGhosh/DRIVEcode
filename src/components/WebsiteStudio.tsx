@@ -127,8 +127,14 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
     }
   };
 
+  const primaryFile =
+    project?.files?.find((f) => f.path === 'index.html' || f.path.endsWith('.html')) ||
+    project?.files?.[0];
+  const sandboxHtml = project ? WebsiteBuilder.generateSandboxHtml(project.files) : '';
+  const currentCode = primaryFile?.content || sandboxHtml;
+
   const handleCopyCode = () => {
-    const code = project?.files?.[0]?.content || WebsiteBuilder.generateSandboxHtml(project?.files || []);
+    const code = currentCode || sandboxHtml;
     if (!code) return;
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
@@ -136,7 +142,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   };
 
   const handleShare = () => {
-    const code = project?.files?.[0]?.content || WebsiteBuilder.generateSandboxHtml(project?.files || []);
+    const code = sandboxHtml || currentCode;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(code);
       setCopiedShare(true);
@@ -145,7 +151,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   };
 
   const handleDownload = () => {
-    const html = project?.files?.[0]?.content || WebsiteBuilder.generateSandboxHtml(project?.files || []);
+    const html = sandboxHtml || currentCode;
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -156,7 +162,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   };
 
   const handleOpenNewTab = () => {
-    const html = WebsiteBuilder.generateSandboxHtml(project?.files || []);
+    const html = sandboxHtml || currentCode;
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
@@ -168,9 +174,6 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
       handleSubmit();
     }
   };
-
-  const sandboxHtml = project ? WebsiteBuilder.generateSandboxHtml(project.files) : '';
-  const currentCode = project?.files?.[0]?.content || '';
 
   // Filter messages relevant to website iterations (including error and streaming states)
   const websiteMessages = messages.filter(
@@ -907,7 +910,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 /* Syntax-Highlighted Code Viewer */
                 <div className="flex-1 flex flex-col h-full bg-[#050505] text-neutral-100 font-mono text-xs overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-2 bg-neutral-900/80 border-b border-neutral-800 shrink-0">
-                    <span className="text-neutral-400 font-medium">index.html</span>
+                    <span className="text-neutral-400 font-medium">{primaryFile?.path || 'index.html'}</span>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={handleCopyCode}
