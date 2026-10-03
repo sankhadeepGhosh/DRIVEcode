@@ -226,7 +226,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-gray-900 text-lg">ROSE Settings</h2>
+            <h2 className="font-semibold text-gray-900 text-lg">DRIVEcode Settings</h2>
           </div>
           <button
             onClick={onClose}
@@ -731,7 +731,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center justify-between p-3.5 rounded-xl bg-gray-50 border border-gray-200/80">
                 <div>
                   <span className="font-semibold text-xs text-gray-800 block">Voice Speech-To-Text</span>
-                  <span className="text-[11px] text-gray-500">Allow microphone recording to dictate prompts into ROSE</span>
+                  <span className="text-[11px] text-gray-500">Allow microphone recording to dictate prompts into DRIVEcode</span>
                 </div>
                 <input
                   type="checkbox"
@@ -860,7 +860,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           {activeTab === 'credentials' && (
             <div className="space-y-5">
               <div className="p-3.5 rounded-xl bg-rose-50/50 border border-rose-100 text-xs text-rose-900 leading-relaxed">
-                ROSE provides server-side Gemini by default. You can optionally provide your own Google Gemini API key or OpenRouter API key for high quotas, custom limits, and full model routing.
+                DRIVEcode provides server-side Gemini by default. You can optionally provide your own Google Gemini API key or OpenRouter API key for high quotas, custom limits, and full model routing.
               </div>
 
               {/* Gemini Key Card */}

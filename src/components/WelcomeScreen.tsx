@@ -48,7 +48,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSelectPrompt, au
         Good day, how can I help?
       </h1>
       <p className="text-sm sm:text-base text-gray-500 max-w-md mb-8 font-normal leading-relaxed">
-        I’m <span className="font-semibold text-gray-800">ROSE</span>, your thoughtful multi-model AI companion. Ask questions, explore concepts, or draft anything on your mind.
+        I’m <span className="font-semibold text-gray-800">DRIVEcode</span>, your thoughtful multi-model AI companion. Ask questions, explore concepts, or draft anything on your mind.
       </p>
 
       {/* Suggestion Starter Cards */}

@@ -1,5 +1,5 @@
 -- ==============================================================================
--- ROSE AI ASSISTANT — SUPABASE DATABASE SCHEMA & ROW LEVEL SECURITY (RLS)
+-- DRIVEcode AI ASSISTANT — SUPABASE DATABASE SCHEMA & ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
 -- Run this script in the Supabase SQL Editor (Dashboard -> SQL Editor -> New Query)
 -- to initialize tables, indexes, and secure Row Level Security policies.

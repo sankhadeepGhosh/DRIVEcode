@@ -1,5 +1,5 @@
 {
-  "name": "ROSE",
+  "name": "DRIVEcode",
   "description": "A clean, modern, personal AI chatbot inspired by ChatGPT and Claude, featuring fluid conversational streaming, voice interaction, and multi-chat management.",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

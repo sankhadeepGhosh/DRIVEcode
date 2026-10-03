@@ -1,12 +1,12 @@
 {
-  "name": "rose-ai",
+  "name": "drivecode",
   "version": "1.0.0",
   "description": "A clean, modern personal AI assistant featuring real-time conversational streaming, in-browser website builder with live preview, deep research engine, and Supabase cloud sync.",
-  "author": "Surya (https://github.com/imsurya26)",
+  "author": "sankhadeepGhosh (https://github.com/sankhadeepGhosh)",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/imsurya26/rose-ai.git"
+    "url": "git+https://github.com/sankhadeepGhosh/DRIVEcode.git"
   },
   "keywords": [
     "ai",

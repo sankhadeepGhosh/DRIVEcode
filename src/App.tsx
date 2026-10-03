@@ -319,7 +319,7 @@ export function App() {
     if (!targetConvId || !conversations.some((c) => c.id === targetConvId)) {
       const newConv: Conversation = {
         id: `conv_${Date.now()}`,
-        title: text.slice(0, 32) || 'Chat with ROSE',
+        title: text.slice(0, 32) || 'Chat with DRIVEcode',
         messages: [],
         modelId: currentModel,
         effort: currentEffort,
@@ -448,7 +448,7 @@ export function App() {
       });
 
       if (!response.ok || !response.body) {
-        throw new Error(`Failed to connect to ROSE stream (${response.status})`);
+        throw new Error(`Failed to connect to DRIVEcode stream (${response.status})`);
       }
 
       triggerAura('streaming');
@@ -775,9 +775,9 @@ export function App() {
       <div className="flex h-screen w-screen items-center justify-center bg-[#FAF9F6] text-gray-900">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-serif text-xl font-bold shadow-md animate-pulse">
-            R
+            D
           </div>
-          <p className="text-xs text-gray-400 font-medium tracking-wide">Loading ROSE...</p>
+          <p className="text-xs text-gray-400 font-medium tracking-wide">Loading DRIVEcode...</p>
         </div>
       </div>
     );
@@ -866,11 +866,11 @@ export function App() {
                   <Menu className="w-5 h-5" />
                 </button>
 
-                {/* ROSE Aura Badge & Status */}
+                {/* DRIVEcode Aura Badge & Status */}
                 <div className="flex items-center gap-2">
                   <Aura state={auraState} size="sm" />
                   <div className="flex flex-col">
-                    <span className="font-serif font-bold text-sm tracking-wide text-[var(--rose-text)]">ROSE</span>
+                    <span className="font-serif font-bold text-sm tracking-wide text-[var(--rose-text)]">DRIVEcode</span>
                     <span className="text-[10px] text-[var(--rose-text-muted)] capitalize -mt-0.5">
                       {auraState === 'idle' ? 'Ready' : auraState}
                     </span>
@@ -936,7 +936,7 @@ export function App() {
                         <Aura state={auraState} size="lg" />
                         <div>
                           <h2 className="font-serif text-2xl font-bold text-gray-900 mb-1">
-                            Welcome to ROSE
+                            Welcome to DRIVEcode
                           </h2>
                           <p className="text-xs text-gray-500 max-w-md">
                             A personal AI companion. Ask anything, initiate real-time web research, or ask to build a website with live preview.
