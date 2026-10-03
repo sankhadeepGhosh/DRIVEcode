@@ -50,6 +50,7 @@ interface SettingsModalProps {
   onResetAppearance: () => void;
   authUserEmail?: string;
   onSignOut?: () => void;
+  initialTab?: 'appearance' | 'ai' | 'profile' | 'voice' | 'usage' | 'credentials';
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -63,16 +64,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onResetAppearance,
   authUserEmail,
   onSignOut,
+  initialTab = 'appearance',
 }) => {
   const [activeTab, setActiveTab] = useState<
     'appearance' | 'ai' | 'profile' | 'voice' | 'usage' | 'credentials'
-  >('appearance');
+  >(initialTab);
+
+  // Sync activeTab when initialTab changes or modal opens
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab, isOpen]);
 
   // Key form states
   const [geminiKeyInput, setGeminiKeyInput] = useState(credentials.geminiApiKey || '');
   const [openRouterKeyInput, setOpenRouterKeyInput] = useState(credentials.openRouterApiKey || '');
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showOpenRouterKey, setShowOpenRouterKey] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Sync inputs with credentials prop if updated externally
+  useEffect(() => {
+    setGeminiKeyInput(credentials.geminiApiKey || '');
+    setOpenRouterKeyInput(credentials.openRouterApiKey || '');
+  }, [credentials]);
 
   // Profile states
   const [profileName, setProfileName] = useState(settings.profile?.name || 'Surya');
@@ -100,6 +116,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       geminiApiKey: geminiKeyInput.trim() || undefined,
       openRouterApiKey: openRouterKeyInput.trim() || undefined,
     });
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2500);
   };
 
   const handleTestGemini = async () => {
@@ -905,17 +923,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     value={geminiKeyInput}
                     onChange={(e) => setGeminiKeyInput(e.target.value)}
                     placeholder="AIzaSy..."
-                    className="w-full pl-3 pr-9 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono text-gray-900 focus:outline-none focus:border-[#E11D48]"
+                    className="w-full pl-3 pr-9 py-2.5 bg-white border border-gray-200 rounded-lg text-sm sm:text-xs font-mono text-gray-900 focus:outline-none focus:border-[#E11D48]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowGeminiKey(!showGeminiKey)}
-                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2.5 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
                   >
-                    {showGeminiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <button
                     onClick={handleTestGemini}
                     disabled={!geminiKeyInput || testingGemini}
@@ -952,17 +970,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     value={openRouterKeyInput}
                     onChange={(e) => setOpenRouterKeyInput(e.target.value)}
                     placeholder="sk-or-v1-..."
-                    className="w-full pl-3 pr-9 py-2 bg-white border border-gray-200 rounded-lg text-xs font-mono text-gray-900 focus:outline-none focus:border-[#E11D48]"
+                    className="w-full pl-3 pr-9 py-2.5 bg-white border border-gray-200 rounded-lg text-sm sm:text-xs font-mono text-gray-900 focus:outline-none focus:border-[#E11D48]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowOpenRouterKey(!showOpenRouterKey)}
-                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                    className="absolute right-2.5 top-3 text-gray-400 hover:text-gray-600 cursor-pointer"
                   >
-                    {showOpenRouterKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    {showOpenRouterKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <button
                     onClick={handleTestOpenRouter}
                     disabled={!openRouterKeyInput || testingOpenRouter}
@@ -976,13 +994,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-2">
-                <button
-                  onClick={handleSaveKeys}
-                  className="px-4 py-2 bg-[#E11D48] text-white rounded-xl text-xs font-bold hover:bg-[#BE123C] cursor-pointer shadow-xs"
-                >
-                  Save API Keys
-                </button>
+              <div className="flex flex-wrap justify-between items-center gap-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleSaveKeys}
+                    className="px-4 py-2 bg-[#E11D48] text-white rounded-xl text-xs font-bold hover:bg-[#BE123C] cursor-pointer shadow-xs"
+                  >
+                    Save API Keys
+                  </button>
+                  {saveSuccess && (
+                    <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1 animate-in fade-in">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Keys saved!</span>
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={onClearCredentials}
                   className="text-xs text-gray-400 hover:text-red-600 flex items-center gap-1 cursor-pointer"

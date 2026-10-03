@@ -15,7 +15,8 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
-  Eye
+  Eye,
+  AlertCircle
 } from 'lucide-react';
 import { Message, GeneratedProject, AgentActionStep } from '../types';
 import { ResearchPanel } from './ResearchPanel';
@@ -28,6 +29,7 @@ interface ChatMessageProps {
   readAloudEnabled?: boolean;
   profile?: import('../types').UserProfile;
   userPrompt?: string;
+  onOpenSettings?: (tab?: 'appearance' | 'ai' | 'profile' | 'voice' | 'usage' | 'credentials') => void;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -37,6 +39,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   readAloudEnabled = true,
   profile,
   userPrompt,
+  onOpenSettings,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
@@ -166,18 +169,38 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             }`}
           >
             {message.error ? (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
-                <p className="font-semibold mb-1">Response Error</p>
-                <p>{message.errorMessage || 'Unable to generate response from model provider.'}</p>
-                {onRetry && (
-                  <button
-                    onClick={onRetry}
-                    className="mt-2 flex items-center gap-1 text-[11px] font-bold text-red-800 hover:underline cursor-pointer"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Retry Request</span>
-                  </button>
-                )}
+              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/50 rounded-2xl text-xs text-rose-800 dark:text-rose-200 space-y-2">
+                <div className="flex items-center gap-1.5 font-semibold text-rose-700 dark:text-rose-300 text-sm">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>
+                    {message.errorMessage?.toLowerCase().includes('api key') ||
+                    message.errorMessage?.toLowerCase().includes('auth')
+                      ? 'API Key Required'
+                      : 'Generation Error'}
+                  </span>
+                </div>
+                <p className="leading-relaxed">{message.errorMessage || 'Unable to generate response from model provider.'}</p>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {(message.errorMessage?.toLowerCase().includes('api key') ||
+                    message.errorMessage?.toLowerCase().includes('auth') ||
+                    message.errorMessage?.toLowerCase().includes('settings')) && onOpenSettings && (
+                    <button
+                      onClick={() => onOpenSettings('credentials')}
+                      className="px-3 py-1.5 bg-[#E11D48] hover:bg-[#BE123C] text-white rounded-xl text-xs font-semibold cursor-pointer shadow-xs flex items-center gap-1 transition-colors"
+                    >
+                      <span>Configure API Key</span>
+                    </button>
+                  )}
+                  {onRetry && (
+                    <button
+                      onClick={onRetry}
+                      className="px-3 py-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 rounded-xl text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer flex items-center gap-1 transition-colors"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Retry Request</span>
+                    </button>
+                  )}
+                </div>
               </div>
             ) : isUser ? (
               <div className="whitespace-pre-wrap select-text font-normal text-gray-900 dark:text-slate-100">
@@ -201,10 +224,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 .replace(/<<<<<<< SEARCH[\s\S]*?>>>>>>> REPLACE/gi, '')
                 .trim();
 
+              const isWebsiteGeneration =
+                Boolean(message.generatedProject) ||
+                Boolean(message.isPatchEdit) ||
+                (hasHtmlCode && (message.isStreaming || (message.actionSteps && message.actionSteps.length > 0)));
+
               const stepsToDisplay: AgentActionStep[] =
                 message.actionSteps && message.actionSteps.length > 0
                   ? message.actionSteps
-                  : (hasHtmlCode || message.isStreaming)
+                  : isWebsiteGeneration
                   ? [
                       {
                         id: 'step_1',
@@ -233,8 +261,15 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
               return (
                 <div className="space-y-3 select-text">
-                  {/* Agent Execution Plan Component in Chat Section */}
-                  {(message.thought || stepsToDisplay.length > 0 || message.isStreaming) && (
+                  {/* Clean Human Explanation Text / Clarifying questions (ALWAYS shown if agent wrote text!) */}
+                  {textCommentary && (
+                    <div className="rose-markdown">
+                      <Markdown>{textCommentary}</Markdown>
+                    </div>
+                  )}
+
+                  {/* Agent Execution Plan Component in Chat Section (situational, for website builds only) */}
+                  {isWebsiteGeneration && stepsToDisplay.length > 0 && !message.error && (
                     <AgentActionTree
                       prompt={userPrompt}
                       code={message.content}
@@ -242,21 +277,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                       thought={message.thought}
                       thoughtDuration={message.thoughtDuration}
                       isStreaming={message.isStreaming}
+                      hasError={Boolean(message.error)}
+                      defaultOpen={message.isStreaming}
                     />
                   )}
 
-                  {/* Clean Human Explanation Text (omitted for website builds to keep clean focus on agent steps) */}
-                  {textCommentary && !hasHtmlCode && (
-                    <div className="rose-markdown">
-                      <Markdown>{textCommentary}</Markdown>
-                    </div>
-                  )}
-
                   {/* Live Streaming Indicator (only if not already showing agent plan) */}
-                  {message.isStreaming && !hasHtmlCode && stepsToDisplay.length === 0 && (
+                  {message.isStreaming && !isWebsiteGeneration && (
                     <div className="flex items-center gap-2 text-xs text-[#EA580C] animate-pulse">
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Thinking and assembling components...</span>
+                      <span>Thinking and responding...</span>
                     </div>
                   )}
 

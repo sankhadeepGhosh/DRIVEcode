@@ -59,6 +59,17 @@ export function App() {
   // UI state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<
+    'appearance' | 'ai' | 'profile' | 'voice' | 'usage' | 'credentials'
+  >('appearance');
+
+  const handleOpenSettings = (
+    tab: 'appearance' | 'ai' | 'profile' | 'voice' | 'usage' | 'credentials' = 'appearance'
+  ) => {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  };
+
   const [auraState, setAuraState] = useState<AuraState>('idle');
   const [isStreaming, setIsStreaming] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<string | null>(null);
@@ -66,6 +77,17 @@ export function App() {
 
   // Active website builder project
   const [activeProject, setActiveProject] = useState<GeneratedProject | null>(null);
+
+  // Server API key detection state
+  const [serverStatus, setServerStatus] = useState<{
+    checked: boolean;
+    hasSystemApiKey: boolean;
+    hasOpenRouterApiKey: boolean;
+  }>({
+    checked: false,
+    hasSystemApiKey: false,
+    hasOpenRouterApiKey: false,
+  });
 
   // Stream & Abort Controllers
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -124,6 +146,11 @@ export function App() {
     fetch('/api/health')
       .then((res) => res.json())
       .then((data) => {
+        setServerStatus({
+          checked: true,
+          hasSystemApiKey: Boolean(data.hasSystemApiKey),
+          hasOpenRouterApiKey: Boolean(data.hasOpenRouterApiKey),
+        });
         const targetModel = data.defaultModel || (!data.hasSystemApiKey && data.hasOpenRouterApiKey ? 'nvidia/nemotron-3-ultra-550b-a55b:free' : null);
         if (targetModel) {
           setSettings((prev) => {
@@ -141,7 +168,13 @@ export function App() {
           );
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setServerStatus({
+          checked: true,
+          hasSystemApiKey: false,
+          hasOpenRouterApiKey: false,
+        });
+      });
   }, []);
 
   // Active conversation object
@@ -295,11 +328,6 @@ export function App() {
 
     let targetConvId = activeId;
     const rawModel = currentConversation?.modelId || settings.defaultModel;
-    const currentModel =
-      (!credentials.geminiApiKey && (rawModel === 'gemini-3.8-flash' || rawModel === 'gemini-3.1-flash-lite'))
-        ? 'nvidia/nemotron-3-ultra-550b-a55b:free'
-        : rawModel;
-    const currentEffort = currentConversation?.effort || settings.defaultEffort;
 
     // Detect if this is a targeted surgical patch or website creation prompt
     const isPatch = Boolean(activeProject) && PatchAgent.isPatchRequest(text, Boolean(activeProject));
@@ -312,6 +340,26 @@ export function App() {
     if (isWebsite && activeMode !== 'website') {
       setActiveMode('website');
     }
+
+    // Determine available keys
+    const hasClientGemini = Boolean(credentials.geminiApiKey?.trim());
+    const hasClientOpenRouter = Boolean(credentials.openRouterApiKey?.trim());
+    const hasGemini = hasClientGemini || serverStatus.hasSystemApiKey;
+    const hasOpenRouter = hasClientOpenRouter || serverStatus.hasOpenRouterApiKey;
+
+    // Model resolution with graceful fallback between providers if one key is present
+    let currentModel = rawModel;
+    if (!hasGemini && (rawModel === 'gemini-3.8-flash' || rawModel === 'gemini-3.1-flash-lite')) {
+      if (hasOpenRouter) {
+        currentModel = 'nvidia/nemotron-3-ultra-550b-a55b:free';
+      }
+    } else if (!hasOpenRouter && (rawModel.includes('/') || rawModel.startsWith('nvidia/') || rawModel.startsWith('poolside/') || rawModel.startsWith('nex-agi/'))) {
+      if (hasGemini) {
+        currentModel = 'gemini-3.8-flash';
+      }
+    }
+
+    const currentEffort = currentConversation?.effort || settings.defaultEffort;
 
     // Resolve route taking attachments and context into account
     const route = AIRouter.resolveRoute(currentModel, currentEffort, text, attachments);
@@ -344,6 +392,46 @@ export function App() {
       timestamp,
       attachments,
     };
+
+    // Pre-flight check: If no API key is available for the resolved provider, show error card without generating steps
+    const requiresGemini = route.provider === 'google';
+    const requiresOpenRouter = route.provider === 'openrouter';
+    const missingKey = (requiresGemini && !hasGemini) || (requiresOpenRouter && !hasOpenRouter);
+
+    if (missingKey) {
+      const keyTypeNeeded = requiresGemini ? 'Google Gemini' : 'OpenRouter';
+      const assistantMsg: Message = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp,
+        isStreaming: false,
+        error: true,
+        errorMessage: `${keyTypeNeeded} API key not configured. Please configure your API key in Settings -> API Keys to generate responses and websites.`,
+        actionSteps: [],
+        thought: undefined,
+        modelUsed: route.modelId,
+        providerUsed: route.provider,
+        effortUsed: route.effort,
+      };
+
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id === targetConvId) {
+            const isFirst = conv.messages.length === 0;
+            return {
+              ...conv,
+              title: isFirst ? text.slice(0, 36) || 'New Conversation' : conv.title,
+              messages: [...conv.messages, userMsg, assistantMsg],
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return conv;
+        })
+      );
+      triggerAura('error', 2500);
+      return;
+    }
 
     const assistantMsg: Message = {
       id: assistantMsgId,
@@ -549,6 +637,8 @@ export function App() {
                                 isStreaming: false,
                                 error: true,
                                 errorMessage: normError.message,
+                                actionSteps: [],
+                                thought: undefined,
                               }
                             : m
                         ),
@@ -761,6 +851,8 @@ export function App() {
                         isStreaming: false,
                         error: true,
                         errorMessage: normErr.message,
+                        actionSteps: [],
+                        thought: undefined,
                       }
                     : m
                 ),
@@ -891,7 +983,7 @@ export function App() {
         onRename={handleRenameConversation}
         onTogglePin={handleTogglePin}
         onToggleArchive={handleToggleArchive}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => handleOpenSettings('appearance')}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         profile={settings.profile}
@@ -915,7 +1007,9 @@ export function App() {
                 const nextTheme = settings.theme === 'dark' ? 'light' : 'dark';
                 setSettings((prev) => ({ ...prev, theme: nextTheme }));
               }}
-              onOpenSettings={() => setSettingsOpen(true)}
+              onOpenSettings={(tab) => handleOpenSettings(tab || 'credentials')}
+              credentials={credentials}
+              selectedModel={currentConversation?.modelId || settings.defaultModel}
               messages={currentConversation?.messages || []}
             />
           </div>
@@ -1053,6 +1147,7 @@ export function App() {
                               setActiveProject(proj);
                               setActiveMode('website');
                             }}
+                            onOpenSettings={(tab) => handleOpenSettings(tab || 'credentials')}
                             readAloudEnabled={settings.readResponsesAloud}
                             profile={settings.profile}
                             userPrompt={precedingUserMsg?.content}
@@ -1087,6 +1182,7 @@ export function App() {
       {/* Settings Modal */}
       <SettingsModal
         isOpen={settingsOpen}
+        initialTab={settingsTab}
         onClose={() => setSettingsOpen(false)}
         settings={settings}
         onUpdateSettings={handleUpdateSettings}

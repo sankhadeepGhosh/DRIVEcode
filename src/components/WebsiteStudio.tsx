@@ -25,6 +25,7 @@ import {
   Layers,
   ChevronRight,
   ChevronDown,
+  ChevronUp,
   AlertCircle,
   AlertTriangle,
   Smartphone,
@@ -35,7 +36,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
-import { GeneratedProject, Message } from '../types';
+import { GeneratedProject, Message, StoredCredentials } from '../types';
 import { WebsiteBuilder } from '../lib/preview/project-manager';
 import { AgentActionTree } from './AgentActionTree';
 import { AgentPlanAnalyzer } from '../lib/preview/plan-analyzer';
@@ -48,8 +49,10 @@ interface WebsiteStudioProps {
   onExitToChat: () => void;
   theme: 'light' | 'dark' | 'system';
   onToggleTheme: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings: (tab?: 'appearance' | 'ai' | 'profile' | 'voice' | 'usage' | 'credentials') => void;
   messages?: Message[];
+  credentials?: StoredCredentials;
+  selectedModel?: string;
 }
 
 export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
@@ -61,6 +64,8 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   onToggleTheme,
   onOpenSettings,
   messages = [],
+  credentials,
+  selectedModel,
 }) => {
   const [viewTab, setViewTab] = useState<'preview' | 'code'>('preview');
   const [sideTab, setSideTab] = useState<'details' | 'previewing'>('previewing');
@@ -72,6 +77,22 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   const [previewKey, setPreviewKey] = useState(0);
   const [fontSerifMode, setFontSerifMode] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [localErrorMessage, setLocalErrorMessage] = useState<string | null>(null);
+  const [showStepsDetail, setShowStepsDetail] = useState(false);
+
+  // Responsive mobile detection hook
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Stretchable preview panel state & split layout
   const [previewWidth, setPreviewWidth] = useState<number | '100%'>('100%');
@@ -204,6 +225,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
     let interval: any;
     if (isBuilding) {
       setElapsedSeconds(0);
+      setLocalErrorMessage(null);
       interval = setInterval(() => {
         setElapsedSeconds((s) => s + 1);
       }, 1000);
@@ -213,7 +235,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
     };
   }, [isBuilding]);
 
-  // Phone auto-jump: "It jumps to the preview by itself when the page is done."
+  // Phone auto-jump to preview once building completes successfully with a project
   useEffect(() => {
     if (prevBuildingRef.current && !isBuilding && project) {
       if (window.innerWidth < 768) {
@@ -228,25 +250,46 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
     const cleanPrompt = promptInput.trim();
     if (!cleanPrompt || isBuilding) return;
 
+    // Check API keys before starting build
+    const hasGemini = Boolean(credentials?.geminiApiKey?.trim());
+    const hasOpenRouter = Boolean(credentials?.openRouterApiKey?.trim());
+    if (!hasGemini && !hasOpenRouter) {
+      setLocalErrorMessage(
+        'No AI API key is configured. Please tap "Configure API Key" to add your Google Gemini or OpenRouter key before building.'
+      );
+      setSideTab('previewing');
+      setMobileTab('chat');
+      return;
+    }
+
+    setLocalErrorMessage(null);
     onBuild(cleanPrompt);
     setPromptInput('');
     setSideTab('previewing');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-    // Switch to preview tab on mobile when generation starts
-    if (window.innerWidth < 768) {
-      setMobileTab('preview');
-    }
+    // Keep user on 'chat' so they see the live steps step-by-step during build!
+    setMobileTab('chat');
   };
 
   const handleCardClick = (cardPrompt: string) => {
     if (isBuilding) return;
+    const hasGemini = Boolean(credentials?.geminiApiKey?.trim());
+    const hasOpenRouter = Boolean(credentials?.openRouterApiKey?.trim());
+    if (!hasGemini && !hasOpenRouter) {
+      setLocalErrorMessage(
+        'No AI API key is configured. Please tap "Configure API Key" to add your Google Gemini or OpenRouter key before building.'
+      );
+      setSideTab('previewing');
+      setMobileTab('chat');
+      return;
+    }
+
+    setLocalErrorMessage(null);
     onBuild(cardPrompt);
     setSideTab('previewing');
-    if (window.innerWidth < 768) {
-      setMobileTab('preview');
-    }
+    setMobileTab('chat');
   };
 
   const primaryFile =
@@ -310,9 +353,20 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
   );
 
   const lastAssistantMsg = [...messages].reverse().find((m) => m.role === 'assistant');
-  const lastErrorMessage = lastAssistantMsg?.error
+  const serverErrorMessage = lastAssistantMsg?.error
     ? lastAssistantMsg.errorMessage || 'AI generation failed. Please configure your API key in Settings.'
     : null;
+  const effectiveErrorMessage = localErrorMessage || serverErrorMessage;
+
+  // Extract clean human explanation or clarifying questions
+  const assistantCommentary = lastAssistantMsg?.content
+    ? lastAssistantMsg.content
+        .replace(/```(?:html:?[^\n]*)?\n[\s\S]*?(?:```|$)/gi, '')
+        .replace(/<!DOCTYPE\s+html[\s\S]*?(?:<\/html>|$)/gi, '')
+        .replace(/<html[\s\S]*?(?:<\/html>|$)/gi, '')
+        .replace(/<<<<<<< SEARCH[\s\S]*?>>>>>>> REPLACE/gi, '')
+        .trim()
+    : '';
 
   // Compute active building step based on elapsed time or completion
   const stepProgress = {
@@ -332,14 +386,15 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
       isStreaming: isBuilding,
       elapsedSeconds,
       fileName: primaryFile?.path || 'index.html',
+      hasError: Boolean(effectiveErrorMessage),
     });
-  }, [lastUserPrompt, primaryFile?.content, isBuilding, elapsedSeconds, primaryFile?.path]);
+  }, [lastUserPrompt, primaryFile?.content, isBuilding, elapsedSeconds, primaryFile?.path, effectiveErrorMessage]);
 
   const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   return (
     <div
-      className={`w-full h-full flex flex-col transition-colors ${
+      className={`w-full max-w-full h-[100dvh] flex flex-col transition-colors overflow-hidden ${
         fontSerifMode ? 'font-serif' : 'font-sans'
       } ${
         isDarkMode
@@ -355,15 +410,15 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
       {/* TOP HEADER BAR (Exact Lovable / Forge Studio Top Bar) */}
       {/* ======================================================== */}
       <header
-        className={`h-14 px-4 flex items-center justify-between shrink-0 z-30 border-b ${
+        className={`h-12 sm:h-14 px-2.5 sm:px-4 flex items-center justify-between shrink-0 z-30 border-b ${
           isDarkMode ? 'border-[#171717] bg-black' : 'border-gray-200 bg-white'
         }`}
       >
         {/* Left: Back to Chat & Brand Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           <button
             onClick={onExitToChat}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+            className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer shrink-0 ${
               isDarkMode
                 ? 'bg-[#111111] hover:bg-[#1a1a1a] text-neutral-300 hover:text-white border border-[#222222]'
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-black border border-gray-200'
@@ -371,26 +426,26 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
             title="Return to standard chat conversation"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Chat</span>
+            <span className="hidden sm:inline">Back to Chat</span>
           </button>
 
           <div className="h-4 w-px bg-neutral-800 hidden sm:block" />
 
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-[#EA580C] text-white flex items-center justify-center font-serif font-bold text-sm shadow-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#EA580C] text-white flex items-center justify-center font-serif font-bold text-xs sm:text-sm shadow-sm shrink-0">
               F
             </div>
-            <span className="font-serif text-lg font-bold tracking-tight">
+            <span className="font-serif text-base sm:text-lg font-bold tracking-tight">
               Forge
             </span>
-            <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#EA580C]/15 text-[#EA580C] font-semibold uppercase tracking-wider">
+            <span className="hidden xs:inline-block text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-[#EA580C]/15 text-[#EA580C] font-semibold uppercase tracking-wider">
               Studio
             </span>
           </div>
 
-          <div className="hidden lg:flex items-center gap-1 text-xs text-neutral-400 pl-2">
-            <ChevronRight className="w-3.5 h-3.5 text-neutral-600" />
-            <span className="font-medium text-neutral-300">
+          <div className="hidden lg:flex items-center gap-1 text-xs text-neutral-400 pl-2 truncate">
+            <ChevronRight className="w-3.5 h-3.5 text-neutral-600 shrink-0" />
+            <span className="font-medium text-neutral-300 truncate">
               {project?.title || 'Prompt Playground'}
             </span>
           </div>
@@ -504,7 +559,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
 
           {/* Settings Modal Button */}
           <button
-            onClick={onOpenSettings}
+            onClick={() => onOpenSettings?.('appearance')}
             className={`p-2 rounded-xl border transition-colors cursor-pointer ${
               isDarkMode
                 ? 'bg-[#0a0a0a] border-[#222222] text-neutral-300 hover:text-white'
@@ -536,12 +591,13 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
           } shrink-0 ${isDarkMode ? 'border-[#171717] bg-black' : 'border-gray-200 bg-white'}`}
           style={{
             backgroundColor: isDarkMode ? '#000000' : '#FFFFFF',
-            width: !isSidebarCollapsed ? `${sidebarWidth}px` : 0,
+            width: isMobile ? '100%' : (!isSidebarCollapsed ? `${sidebarWidth}px` : 0),
+            maxWidth: '100%',
           }}
         >
           {/* Sub-Header: Details vs Previewing Tabs (Exact Match to Image 1) */}
           <div
-            className={`px-5 py-3 border-b flex items-center justify-between shrink-0 ${
+            className={`px-3 sm:px-5 py-2.5 sm:py-3 border-b flex items-center justify-between shrink-0 ${
               isDarkMode ? 'border-[#171717] bg-[#050505]' : 'border-gray-200 bg-gray-50'
             }`}
           >
@@ -554,7 +610,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
               >
                 <button
                   onClick={() => setSideTab('details')}
-                  className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     sideTab === 'details'
                       ? 'bg-neutral-800 text-white font-semibold'
                       : 'text-neutral-400 hover:text-white'
@@ -564,7 +620,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 </button>
                 <button
                   onClick={() => setSideTab('previewing')}
-                  className={`px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
+                  className={`px-2.5 sm:px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     sideTab === 'previewing'
                       ? 'bg-[#EA580C] text-white font-semibold'
                       : 'text-neutral-400 hover:text-white'
@@ -590,12 +646,12 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
           </div>
 
           {/* Scrollable Conversation & Suggestion Area */}
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-5 space-y-4 custom-scrollbar">
             {/* If Previewing Tab is active: Show Progress / Ticking Checklist & Prompts */}
             {sideTab === 'previewing' ? (
               <div className="space-y-4">
-                {/* If NO project, NO messages, and NOT building: Show Starters */}
-                {websiteMessages.length === 0 && !project && !isBuilding ? (
+                {/* If NO project, NO messages, and NOT building and NO error: Show Starters */}
+                {websiteMessages.length === 0 && !project && !isBuilding && !effectiveErrorMessage ? (
                   <div className="space-y-2.5 pt-1">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 block">
                       Quick Website Starters
@@ -616,11 +672,11 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                     ))}
                   </div>
                 ) : (
-                  /* Website Exists or is Building: Showcase the Agent Execution Steps Cleanly! */
+                  /* Website Exists, Building, or Error: Showcase according to situation cleanly! */
                   <div className="space-y-3.5 animate-in fade-in duration-300">
                     {/* Active Build Prompt Card */}
                     <div
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 shadow-xs ${
+                      className={`p-3 sm:p-3.5 rounded-2xl border flex items-center justify-between gap-3 shadow-xs ${
                         isDarkMode
                           ? 'bg-[#080808] border-[#1a1a1a]'
                           : 'bg-gray-50/80 border-gray-200'
@@ -643,6 +699,11 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                             <Loader2 className="w-3 h-3 animate-spin" />
                             <span>0:{elapsedSeconds < 10 ? `0${elapsedSeconds}` : elapsedSeconds}s</span>
                           </span>
+                        ) : effectiveErrorMessage ? (
+                          <span className="text-[10px] px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-500 font-medium flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            <span>Error</span>
+                          </span>
                         ) : (
                           <span className="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" />
@@ -652,42 +713,110 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                       </div>
                     </div>
 
-                    {/* Prominent Agent Execution Steps (Identical to Chat Section) */}
-                    <div className="w-full">
-                      <AgentActionTree
-                        prompt={lastUserPrompt}
-                        code={primaryFile?.content || currentCode}
-                        steps={lastAssistantMsg?.actionSteps}
-                        thought={lastAssistantMsg?.thought}
-                        thoughtDuration={lastAssistantMsg?.thoughtDuration}
-                        isStreaming={isBuilding}
-                        elapsedSeconds={elapsedSeconds}
-                      />
-                    </div>
-
-                    {/* Generation Error banner if any */}
-                    {lastErrorMessage && (
-                      <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs space-y-2">
-                        <div className="flex items-center gap-1.5 font-semibold text-rose-400">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span>Generation Error</span>
+                    {/* 1. Generation Error banner (ONLY error shown, NO agent steps generated) */}
+                    {effectiveErrorMessage && (
+                      <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs space-y-2.5 animate-in fade-in duration-200">
+                        <div className="flex items-center gap-2 font-semibold text-rose-400 text-sm">
+                          <AlertTriangle className="w-4 h-4 shrink-0" />
+                          <span>
+                            {effectiveErrorMessage.toLowerCase().includes('api key') ||
+                            effectiveErrorMessage.toLowerCase().includes('auth')
+                              ? 'API Key Required'
+                              : 'Generation Error'}
+                          </span>
                         </div>
-                        <p className="leading-relaxed">{lastErrorMessage}</p>
-                        <div className="flex items-center gap-2 pt-1">
+                        <p className="leading-relaxed text-xs text-rose-200">{effectiveErrorMessage}</p>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
                           <button
-                            onClick={onOpenSettings}
-                            className="px-2.5 py-1 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                            onClick={() => onOpenSettings('credentials')}
+                            className="px-3 py-1.5 bg-[#EA580C] hover:bg-[#C2410C] text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
                           >
-                            Configure API Key
+                            <Sliders className="w-3.5 h-3.5" />
+                            <span>Configure API Key</span>
                           </button>
                           <button
-                            onClick={() => onBuild(lastUserPrompt)}
-                            className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
+                            onClick={() => {
+                              setLocalErrorMessage(null);
+                              onBuild(lastUserPrompt);
+                            }}
+                            className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-xl text-xs font-medium transition-colors cursor-pointer"
                           >
                             Retry
                           </button>
                         </div>
                       </div>
+                    )}
+
+                    {/* 2. Agent Explanation or Question ("If an agent needs to know something, it needs to show that") */}
+                    {!effectiveErrorMessage && assistantCommentary && (
+                      <div
+                        className={`p-3.5 rounded-2xl border text-xs sm:text-[13px] leading-relaxed space-y-1.5 animate-in fade-in duration-200 ${
+                          isDarkMode
+                            ? 'bg-[#0c0c0c] border-[#1e1e1e] text-neutral-200'
+                            : 'bg-gray-50 border-gray-200 text-gray-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-[#EA580C]">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Forge Assistant</span>
+                        </div>
+                        <div className="rose-markdown whitespace-pre-wrap">
+                          {assistantCommentary}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Situational Agent Steps:
+                        - While actively building: show steps step by step!
+                        - When completed and project exists: compact collapsible card (not cluttering mobile all the time)
+                    */}
+                    {!effectiveErrorMessage && (
+                      isBuilding ? (
+                        <div className="w-full animate-in fade-in duration-200">
+                          <AgentActionTree
+                            prompt={lastUserPrompt}
+                            code={primaryFile?.content || currentCode}
+                            steps={lastAssistantMsg?.actionSteps}
+                            thought={lastAssistantMsg?.thought}
+                            thoughtDuration={lastAssistantMsg?.thoughtDuration}
+                            isStreaming={true}
+                            elapsedSeconds={elapsedSeconds}
+                            defaultOpen={true}
+                          />
+                        </div>
+                      ) : project ? (
+                        <div className="w-full rounded-2xl border border-neutral-800 bg-[#0a0a0a] overflow-hidden shadow-xs">
+                          <button
+                            onClick={() => setShowStepsDetail(!showStepsDetail)}
+                            className="w-full flex items-center justify-between p-3 text-xs font-medium text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              <span className="font-semibold text-neutral-200">Execution Plan</span>
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono">
+                                Verified
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[11px] text-neutral-400">
+                              <span>{showStepsDetail ? 'Hide Steps' : 'View Steps'}</span>
+                              {showStepsDetail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </div>
+                          </button>
+                          {showStepsDetail && (
+                            <div className="p-2 border-t border-neutral-800 bg-black">
+                              <AgentActionTree
+                                prompt={lastUserPrompt}
+                                code={primaryFile?.content || currentCode}
+                                steps={lastAssistantMsg?.actionSteps}
+                                thought={lastAssistantMsg?.thought}
+                                thoughtDuration={lastAssistantMsg?.thoughtDuration}
+                                isStreaming={false}
+                                defaultOpen={true}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ) : null
                     )}
 
                     {/* Iteration History (for multiple prompts) */}
@@ -785,7 +914,8 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
               />
               <div className="flex items-center justify-between pt-1">
                 <span className={`text-[10px] ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`}>
-                  Shift+Enter for newline
+                  <span className="hidden sm:inline">Shift+Enter for newline</span>
+                  <span className="sm:hidden">Tap Send to build</span>
                 </span>
                 <button
                   type="submit"
@@ -873,7 +1003,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
             </div>
 
             {/* Center: Device Presets (Mobile / Tablet / Laptop / 100%) */}
-            <div className="flex items-center gap-1 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-xl">
+            <div className="hidden sm:flex items-center gap-1 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-xl">
               {devicePresets.map((preset) => {
                 const Icon = preset.icon;
                 const isActive = previewWidth === preset.width;
@@ -1033,7 +1163,7 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                   <span>Elapsed: {elapsedSeconds}s</span>
                 </div>
               </div>
-            ) : lastErrorMessage ? (
+            ) : effectiveErrorMessage ? (
               /* Actionable Canvas Error State */
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 max-w-md mx-auto animate-in fade-in zoom-in-95 duration-200">
                 <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shadow-sm">
@@ -1044,12 +1174,12 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                     Website Generation Paused
                   </h3>
                   <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed">
-                    {lastErrorMessage}
+                    {effectiveErrorMessage}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 pt-3">
                   <button
-                    onClick={onOpenSettings}
+                    onClick={() => onOpenSettings?.('credentials')}
                     className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
                   >
                     Open Settings & Add API Key

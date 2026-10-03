@@ -20,6 +20,8 @@ interface AgentActionTreeProps {
   isStreaming?: boolean;
   elapsedSeconds?: number;
   className?: string;
+  hasError?: boolean;
+  defaultOpen?: boolean;
 }
 
 export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
@@ -33,10 +35,20 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
   isStreaming = false,
   elapsedSeconds,
   className = '',
+  hasError = false,
+  defaultOpen,
 }) => {
   const [thoughtOpen, setThoughtOpen] = useState(false);
-  const [planOpen, setPlanOpen] = useState(true);
+  // While generating/streaming: open to show steps step-by-step; when completed: collapsed by default
+  const [planOpen, setPlanOpen] = useState(defaultOpen !== undefined ? defaultOpen : isStreaming);
   const [streamSeconds, setStreamSeconds] = useState(0);
+
+  // Auto-expand plan when actively streaming so user sees live steps
+  useEffect(() => {
+    if (isStreaming) {
+      setPlanOpen(true);
+    }
+  }, [isStreaming]);
 
   // Smooth live ticking while streaming to drive step-by-step execution
   useEffect(() => {
@@ -61,6 +73,7 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
 
   // Compute accurate, prompt-specific and code-specific step-by-step tasks
   const planTasks: Task[] = React.useMemo(() => {
+    if (hasError) return [];
     if (tasks && tasks.length > 0) return tasks;
 
     return AgentPlanAnalyzer.generateAccurateTasks({
@@ -69,11 +82,17 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
       isStreaming,
       elapsedSeconds: activeElapsed,
       fileName,
+      hasError,
     });
-  }, [tasks, prompt, code, isStreaming, activeElapsed, fileName]);
+  }, [tasks, prompt, code, isStreaming, activeElapsed, fileName, hasError]);
 
   const hasAnyPlan = planTasks.length > 0;
   const completedCount = planTasks.filter((t) => t.status === 'completed').length;
+
+  // If there's an error or nothing to display, do not render empty tree
+  if (hasError || (!hasAnyPlan && !hasThought && !steps.some((s) => s.diff))) {
+    return null;
+  }
 
   return (
     <div className={`space-y-2 py-1 w-full ${className}`}>

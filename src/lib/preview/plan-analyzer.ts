@@ -8,6 +8,7 @@ export interface PlanAnalysisContext {
   thought?: string;
   fileName?: string;
   isPatch?: boolean;
+  hasError?: boolean;
 }
 
 export class AgentPlanAnalyzer {
@@ -29,7 +30,13 @@ export class AgentPlanAnalyzer {
       elapsedSeconds = 0,
       fileName = 'index.html',
       isPatch = false,
+      hasError = false,
     } = ctx;
+
+    // If an error occurred, or no code exists and we are not actively streaming, do not generate tasks
+    if (hasError || (!code?.trim() && !isStreaming)) {
+      return [];
+    }
 
     // Extract real facts from generated code
     const titleMatch = code.match(/<title>([^<]+)<\/title>/i);

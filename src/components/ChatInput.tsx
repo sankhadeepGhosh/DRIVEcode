@@ -160,7 +160,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pb-4">
+    <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 sm:pb-4">
       {/* Attachments Preview Chips */}
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2 p-2 bg-white/80 rounded-xl border border-gray-200/80 shadow-2xs">
@@ -189,7 +189,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Main Glass Input Bar */}
       <div className="bg-[var(--rose-surface)] rounded-2xl border border-[var(--rose-border)] shadow-sm focus-within:border-[var(--rose-accent)] transition-all">
-        <div className="px-4 pt-3">
+        <div className="px-3 sm:px-4 pt-2.5 sm:pt-3">
           <textarea
             ref={textareaRef}
             rows={1}
@@ -201,12 +201,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 ? 'Ask anything for real-time web research & citation...'
                 : 'Message DRIVEcode or ask to build a website...'
             }
-            className="w-full resize-none bg-transparent text-sm text-[var(--rose-text)] placeholder:text-[var(--rose-text-muted)] focus:outline-none max-h-40 leading-relaxed"
+            className="w-full resize-none bg-transparent text-base sm:text-sm text-[var(--rose-text)] placeholder:text-[var(--rose-text-muted)] focus:outline-none max-h-40 leading-relaxed"
           />
         </div>
 
         {/* Action Controls Toolbar */}
-        <div className="flex items-center justify-between px-3 py-2 border-t border-[var(--rose-border)]">
+        <div className="flex items-center justify-between px-2.5 sm:px-3 py-2 border-t border-[var(--rose-border)]">
           {/* Left Action Buttons */}
           <div className="flex items-center gap-1">
             {/* File Attachment Trigger */}
@@ -230,7 +230,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => setIsResearchActive(!isResearchActive)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 isResearchActive
                   ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
                   : 'text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-background)]'
@@ -248,15 +248,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 onClick={() => setShowModelPicker(!showModelPicker)}
-                className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-background)] rounded-lg transition-colors cursor-pointer"
+                className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-medium text-[var(--rose-text-muted)] hover:text-[var(--rose-text)] hover:bg-[var(--rose-background)] rounded-lg transition-colors cursor-pointer"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--rose-text-muted)]" />
-                <span className="truncate max-w-[120px]">{getModelLabel()}</span>
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--rose-text-muted)] shrink-0" />
+                <span className="truncate max-w-[90px] sm:max-w-[120px]">{getModelLabel()}</span>
               </button>
 
               {/* Model / Effort Dropdown */}
               {showModelPicker && (
-                <div className="absolute bottom-full left-0 mb-2 w-72 bg-[var(--rose-surface)] text-[var(--rose-text)] rounded-2xl shadow-xl border border-[var(--rose-border)] p-2.5 z-50 text-xs space-y-2 animate-in fade-in zoom-in-95">
+                <div className="absolute bottom-full left-0 mb-2 w-[calc(100vw-36px)] max-w-xs sm:w-72 bg-[var(--rose-surface)] text-[var(--rose-text)] rounded-2xl shadow-xl border border-[var(--rose-border)] p-2.5 z-50 text-xs space-y-2 animate-in fade-in zoom-in-95">
                   <div className="font-semibold text-gray-800 uppercase tracking-wider text-[10px] px-1">
                     Select Model
                   </div>

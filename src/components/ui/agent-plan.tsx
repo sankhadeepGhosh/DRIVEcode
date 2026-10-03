@@ -186,11 +186,15 @@ export default function Plan({
     if (propTasks && propTasks.length > 0) {
       setTasks(propTasks);
 
-      // Auto-expand all tasks with subtasks so user sees the full steps tree
-      setExpandedTasks((prev) => {
-        const allIds = propTasks.map((t) => t.id);
-        return Array.from(new Set([...prev, ...allIds]));
-      });
+      // Auto-expand only active/in-progress tasks to keep UI clean and responsive on mobile
+      const activeTasks = propTasks.filter(
+        (t) => t.status === "in-progress" || t.status === "need-help"
+      );
+      if (activeTasks.length > 0) {
+        setExpandedTasks(activeTasks.map((t) => t.id));
+      } else {
+        setExpandedTasks((prev) => (prev.length > 0 ? prev : [propTasks[0].id]));
+      }
     }
   }, [propTasks]);
   // Add support for reduced motion preference
@@ -454,9 +458,9 @@ export default function Plan({
                         className="flex min-w-0 flex-grow cursor-pointer items-center justify-between"
                         onClick={() => toggleTaskExpansion(task.id)}
                       >
-                        <div className="mr-2 flex-1 truncate">
+                        <div className="mr-2 flex-1 min-w-0">
                           <span
-                            className={`text-xs sm:text-sm font-semibold tracking-tight ${
+                            className={`text-xs sm:text-sm font-semibold tracking-tight leading-snug break-words ${
                               isCompleted
                                 ? "text-muted-foreground line-through font-normal"
                                 : "text-foreground"
@@ -466,9 +470,9 @@ export default function Plan({
                           </span>
                         </div>
 
-                        <div className="flex flex-shrink-0 items-center space-x-2 text-xs">
+                        <div className="flex flex-shrink-0 items-center space-x-1.5 sm:space-x-2 text-xs">
                           {task.dependencies.length > 0 && (
-                            <div className="flex items-center mr-2">
+                            <div className="hidden sm:flex items-center mr-1">
                               <div className="flex flex-wrap gap-1">
                                 {task.dependencies.map((dep, idx) => (
                                   <motion.span
@@ -494,15 +498,15 @@ export default function Plan({
                           )}
 
                           <motion.span
-                            className={`rounded px-1.5 py-0.5 ${
+                            className={`rounded px-1.5 py-0.5 text-[10px] sm:text-xs font-medium capitalize ${
                               task.status === "completed"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
                                 : task.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-700"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
                                   : task.status === "need-help"
-                                    ? "bg-yellow-100 text-yellow-700"
+                                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400"
                                     : task.status === "failed"
-                                      ? "bg-red-100 text-red-700"
+                                      ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
                                       : "bg-muted text-muted-foreground"
                             }`}
                             variants={statusBadgeVariants}
@@ -592,7 +596,7 @@ export default function Plan({
                                     </motion.div>
 
                                     <span
-                                      className={`cursor-pointer text-xs sm:text-sm font-medium ${
+                                      className={`cursor-pointer text-xs sm:text-sm font-medium leading-snug break-words flex-1 min-w-0 ${
                                         subtask.status === "completed"
                                           ? "text-muted-foreground line-through font-normal"
                                           : "text-foreground"
