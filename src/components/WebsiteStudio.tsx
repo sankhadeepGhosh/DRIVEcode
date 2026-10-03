@@ -31,6 +31,7 @@ import {
 import { GeneratedProject, Message } from '../types';
 import { WebsiteBuilder } from '../lib/preview/project-manager';
 import { AgentActionTree } from './AgentActionTree';
+import Plan, { Task } from './ui/agent-plan';
 
 interface WebsiteStudioProps {
   project: GeneratedProject | null;
@@ -196,6 +197,129 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
     step4: isBuilding ? elapsedSeconds >= 12 : Boolean(project),
     step5: !isBuilding && Boolean(project),
   };
+
+  // Dynamic website generation tasks for the Agent Plan component
+  const websiteBuildingTasks: Task[] = [
+    {
+      id: "1",
+      title: "Analyze Requirements & Layout Architecture",
+      description: "Extract prompt intent, structure components, and select visual design system.",
+      status: elapsedSeconds >= 1 ? (elapsedSeconds >= 4 ? "completed" : "in-progress") : "pending",
+      priority: "high",
+      level: 0,
+      dependencies: [],
+      subtasks: [
+        {
+          id: "1.1",
+          title: "Parse prompt specifications",
+          description: "Analyze requested layout hierarchy, color scheme, and component requirements.",
+          status: elapsedSeconds >= 1 ? "completed" : "in-progress",
+          priority: "high",
+          tools: ["prompt-analyzer", "ai-router"],
+        },
+        {
+          id: "1.2",
+          title: "Define component structure & responsive grid",
+          description: "Select font pairing (Inter/Plus Jakarta Sans) and responsive layout tokens.",
+          status: elapsedSeconds >= 3 ? "completed" : elapsedSeconds >= 1 ? "in-progress" : "pending",
+          priority: "medium",
+          tools: ["design-system", "layout-planner"],
+        },
+      ],
+    },
+    {
+      id: "2",
+      title: "Synthesize Semantic HTML5 & Modern Layout",
+      description: "Construct accessible DOM tree with semantic header, hero, sections, and footer.",
+      status: elapsedSeconds >= 4 ? (elapsedSeconds >= 8 ? "completed" : "in-progress") : "pending",
+      priority: "high",
+      level: 0,
+      dependencies: ["1"],
+      subtasks: [
+        {
+          id: "2.1",
+          title: "Generate clean semantic markup",
+          description: "Create HTML5 structure with SEO metadata and responsive containers.",
+          status: elapsedSeconds >= 6 ? "completed" : elapsedSeconds >= 4 ? "in-progress" : "pending",
+          priority: "high",
+          tools: ["html-generator", "code-assistant"],
+        },
+        {
+          id: "2.2",
+          title: "Add SVGs and Lucide icon vectors",
+          description: "Embed crisp SVG icons for visual accents and interactive elements.",
+          status: elapsedSeconds >= 8 ? "completed" : elapsedSeconds >= 6 ? "in-progress" : "pending",
+          priority: "medium",
+          tools: ["icon-library", "vector-engine"],
+        },
+      ],
+    },
+    {
+      id: "3",
+      title: "Apply Modern Tailwind CSS & Responsive Tokens",
+      description: "Inject Tailwind utility classes, fluid spacing, smooth gradients, and dark/light modes.",
+      status: elapsedSeconds >= 8 ? (elapsedSeconds >= 13 ? "completed" : "in-progress") : "pending",
+      priority: "high",
+      level: 1,
+      dependencies: ["2"],
+      subtasks: [
+        {
+          id: "3.1",
+          title: "Configure Tailwind CDN and custom styles",
+          description: "Set up utility palette, glassmorphism, animations, and typography.",
+          status: elapsedSeconds >= 10 ? "completed" : elapsedSeconds >= 8 ? "in-progress" : "pending",
+          priority: "high",
+          tools: ["tailwind-engine", "css-optimizer"],
+        },
+        {
+          id: "3.2",
+          title: "Verify responsive mobile & tablet breakpoints",
+          description: "Ensure layout adapts smoothly from mobile screens to desktop ultrawide.",
+          status: elapsedSeconds >= 13 ? "completed" : elapsedSeconds >= 10 ? "in-progress" : "pending",
+          priority: "medium",
+          tools: ["viewport-simulator"],
+        },
+      ],
+    },
+    {
+      id: "4",
+      title: "Inject Interactivity & Client State Handlers",
+      description: "Attach vanilla JavaScript handlers for filters, toggles, calculators, or modals.",
+      status: elapsedSeconds >= 13 ? (project ? "completed" : "in-progress") : "pending",
+      priority: "medium",
+      level: 1,
+      dependencies: ["3"],
+      subtasks: [
+        {
+          id: "4.1",
+          title: "Bind DOM event listeners and local state",
+          description: "Add functional interactivity for buttons, inputs, tabs, and animations.",
+          status: elapsedSeconds >= 15 || Boolean(project) ? "completed" : elapsedSeconds >= 13 ? "in-progress" : "pending",
+          priority: "high",
+          tools: ["js-runtime", "state-manager"],
+        },
+      ],
+    },
+    {
+      id: "5",
+      title: "Mount Isolated Live Sandbox & Render",
+      description: "Bundle complete index.html and initialize isolated sandboxed iframe.",
+      status: Boolean(project) ? "completed" : elapsedSeconds >= 16 ? "in-progress" : "pending",
+      priority: "high",
+      level: 1,
+      dependencies: ["4"],
+      subtasks: [
+        {
+          id: "5.1",
+          title: "Mount sandbox iframe and verify execution",
+          description: "Verify console errors and mount live interactive page.",
+          status: Boolean(project) ? "completed" : "pending",
+          priority: "high",
+          tools: ["sandbox-runtime", "preview-engine"],
+        },
+      ],
+    },
+  ];
 
   const isDarkMode = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
@@ -691,6 +815,20 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                   <p>3. The live preview updates automatically in real-time.</p>
                   <p>4. Export standalone .html anytime with one click.</p>
                 </div>
+
+                <div
+                  className={`p-4 rounded-2xl border space-y-3 ${
+                    isDarkMode ? 'bg-[#080808] border-[#171717]' : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <h3 className="font-semibold text-sm text-neutral-100 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#EA580C]" />
+                    <span>Autonomous Agent Workflow Plan</span>
+                  </h3>
+                  <div className="rounded-xl border border-neutral-800/80 bg-black/60 overflow-hidden">
+                    <Plan initialTasks={websiteBuildingTasks} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -793,25 +931,33 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                 </div>
               )
             ) : isBuilding ? (
-              /* Live Building Canvas State with animated pulse */
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-6 animate-in fade-in zoom-in-95 duration-200">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-3xl bg-[#EA580C]/10 border border-[#EA580C]/30 flex items-center justify-center shadow-lg shadow-[#EA580C]/10 animate-pulse">
-                    <Loader2 className="w-8 h-8 text-[#EA580C] animate-spin" />
+              /* Live Agent Processing UI (Agent Plan with live tasks & MCP servers) */
+              <div className="flex-1 w-full h-full flex flex-col p-3 md:p-5 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between pb-3 mb-2 border-b border-neutral-800 shrink-0">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#EA580C]/15 border border-[#EA580C]/40 flex items-center justify-center text-[#EA580C] shadow-sm animate-pulse">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif text-sm sm:text-base font-bold text-neutral-100 flex items-center gap-2">
+                        Forge Agent Execution Plan
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EA580C]/20 text-[#EA580C] font-mono uppercase tracking-wider font-semibold">
+                          Active Run
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-neutral-400">
+                        Live autonomous subtask orchestration, MCP tool calls, and state verification
+                      </p>
+                    </div>
                   </div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 animate-ping" />
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300 shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-[#EA580C]" />
+                    <span>Elapsed: {elapsedSeconds}s</span>
+                  </div>
                 </div>
-                <div className="space-y-2 max-w-sm">
-                  <h3 className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-neutral-100">
-                    Architecting Your Website...
-                  </h3>
-                  <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed">
-                    Generating responsive layout, modern Tailwind styles, and live interactive state handlers.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 text-xs text-neutral-300">
-                  <Clock className="w-3.5 h-3.5 text-[#EA580C]" />
-                  <span>Elapsed: {elapsedSeconds}s</span>
+
+                <div className="flex-1 overflow-auto rounded-xl border border-neutral-800/80 bg-black/60 custom-scrollbar">
+                  <Plan initialTasks={websiteBuildingTasks} />
                 </div>
               </div>
             ) : lastErrorMessage ? (

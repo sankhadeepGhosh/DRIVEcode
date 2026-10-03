@@ -5,6 +5,28 @@
   --font-serif: 'Newsreader', Georgia, serif;
   --font-mono: 'JetBrains Mono', monospace;
 
+  /* Standard shadcn design tokens */
+  --background: #FFFFFF;
+  --foreground: #09090B;
+  --card: #FFFFFF;
+  --card-foreground: #09090B;
+  --popover: #FFFFFF;
+  --popover-foreground: #09090B;
+  --primary: #18181B;
+  --primary-foreground: #FAFAFA;
+  --secondary: #F4F4F5;
+  --secondary-foreground: #18181B;
+  --muted: #F4F4F5;
+  --muted-foreground: #71717A;
+  --accent: #F4F4F5;
+  --accent-foreground: #18181B;
+  --destructive: #EF4444;
+  --destructive-foreground: #FAFAFA;
+  --border: #E4E4E7;
+  --input: #E4E4E7;
+  --ring: #18181B;
+  --radius: 0.5rem;
+
   /* Authoritative Theme Custom Properties (Pure White Light Mode Default) */
   --rose-accent: #E11D48;
   --rose-accent-hover: #BE123C;
@@ -20,7 +42,28 @@
 
 /* Explicit Complete Dark Theme (Pure #000000 OLED Black) */
 html.dark,
-body.dark-theme {
+body.dark-theme,
+.dark {
+  --background: #000000;
+  --foreground: #FAFAFA;
+  --card: #0A0A0A;
+  --card-foreground: #FAFAFA;
+  --popover: #0A0A0A;
+  --popover-foreground: #FAFAFA;
+  --primary: #FAFAFA;
+  --primary-foreground: #18181B;
+  --secondary: #18181B;
+  --secondary-foreground: #FAFAFA;
+  --muted: #18181B;
+  --muted-foreground: #A1A1AA;
+  --accent: #18181B;
+  --accent-foreground: #FAFAFA;
+  --destructive: #7F1D1D;
+  --destructive-foreground: #FAFAFA;
+  --border: #222222;
+  --input: #222222;
+  --ring: #D4D4D8;
+
   --rose-background: #000000;
   --rose-sidebar: #000000;
   --rose-surface: #0A0A0A;
