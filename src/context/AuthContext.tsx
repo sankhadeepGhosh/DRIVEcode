@@ -139,11 +139,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const configuredAppUrl = ((import.meta.env as any).VITE_APP_URL || '').trim();
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-    // If running on localhost and a remote public URL is configured, use it so email links work on mobile
-    if (isLocal && configuredAppUrl && !configuredAppUrl.includes('localhost') && !configuredAppUrl.includes('127.0.0.1')) {
+    // 1. If an explicit remote public URL is configured in .env, always use it
+    if (configuredAppUrl && !configuredAppUrl.includes('localhost') && !configuredAppUrl.includes('127.0.0.1')) {
       return configuredAppUrl.replace(/\/$/, '');
     }
 
+    // 2. If running locally on localhost, do NOT force localhost into email links!
+    // Returning undefined instructs Supabase to redirect to its production Site URL configured in Supabase Dashboard.
+    if (isLocal) {
+      return undefined;
+    }
+
+    // 3. In production, use the current window origin
     return window.location.origin;
   };
 
@@ -165,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
         options: {
           data: { display_name: displayName },
-          emailRedirectTo,
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
         },
       });
 
@@ -205,7 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         type: 'signup',
         email,
         options: {
-          emailRedirectTo,
+          ...(emailRedirectTo ? { emailRedirectTo } : {}),
         },
       });
 
@@ -239,9 +246,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getAuthRedirectUrl() || window.location.origin,
-      });
+      const redirectUrl = getAuthRedirectUrl();
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email,
+        redirectUrl ? { redirectTo: redirectUrl } : undefined
+      );
       if (error) return { error: error.message };
       return { error: null };
     } catch (err: any) {
