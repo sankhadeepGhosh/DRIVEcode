@@ -101,18 +101,18 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
         <div className="text-xs">
           <button
             onClick={() => hasThought && setThoughtOpen(!thoughtOpen)}
-            className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none text-[11px] font-mono bg-muted/60 hover:bg-muted border border-border"
+            className="flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer select-none text-[11px] font-mono bg-neutral-100 dark:bg-neutral-900 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800"
           >
             <Clock className="w-3 h-3 text-[#EA580C]" />
             <span>Thought for {effectiveDuration}s</span>
             {hasThought && (
-              thoughtOpen ? <ChevronUp className="w-3 h-3 text-muted-foreground" /> : <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              thoughtOpen ? <ChevronUp className="w-3 h-3 text-neutral-500 dark:text-neutral-400" /> : <ChevronDown className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
             )}
           </button>
 
           {/* Expanded Thought Reasoning Content */}
           {hasThought && thoughtOpen && (
-            <div className="mt-1.5 ml-2 pl-3 border-l-2 border-[#EA580C]/40 text-[11px] text-foreground font-mono italic leading-relaxed py-2 bg-card/90 rounded-r-xl max-h-56 overflow-y-auto custom-scrollbar whitespace-pre-wrap select-text border border-border">
+            <div className="mt-1.5 ml-2 pl-3 border-l-2 border-[#EA580C]/40 text-[11px] text-neutral-800 dark:text-neutral-200 font-mono italic leading-relaxed py-2 bg-neutral-50 dark:bg-[#0c0c0c] rounded-r-xl max-h-56 overflow-y-auto custom-scrollbar whitespace-pre-wrap select-text border border-neutral-200 dark:border-neutral-800">
               {thought}
             </div>
           )}
@@ -121,11 +121,11 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
 
       {/* 2. Structured Agent Plan Component in Chat */}
       {hasAnyPlan && (
-        <div className="w-full rounded-2xl border border-border bg-card shadow-xs overflow-hidden">
-          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border bg-muted/40">
+        <div className="w-full rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0c0c0c] shadow-xs overflow-hidden">
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-900/60">
             <div className="flex items-center gap-2">
               <Bot className="w-4 h-4 text-[#EA580C]" />
-              <span className="text-xs font-semibold text-foreground">
+              <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
                 Agent Execution Steps
               </span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#EA580C]/15 text-[#EA580C] font-mono font-medium">
@@ -136,7 +136,7 @@ export const AgentActionTree: React.FC<AgentActionTreeProps> = ({
             </div>
             <button
               onClick={() => setPlanOpen(!planOpen)}
-              className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1 cursor-pointer transition-colors"
+              className="text-[11px] text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
             >
               <span>{planOpen ? 'Collapse' : 'Expand'}</span>
               {planOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}

@@ -512,7 +512,9 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
               className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                 viewTab === 'preview'
                   ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
-                  : 'text-neutral-400 hover:text-white'
+                  : isDarkMode
+                    ? 'text-neutral-400 hover:text-white'
+                    : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Eye className="w-3 h-3" />
@@ -526,7 +528,9 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
               className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1.5 ${
                 viewTab === 'code'
                   ? 'bg-[#EA580C] text-white shadow-2xs font-semibold'
-                  : 'text-neutral-400 hover:text-white'
+                  : isDarkMode
+                    ? 'text-neutral-400 hover:text-white'
+                    : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               <Code2 className="w-3 h-3" />
@@ -634,8 +638,12 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                   onClick={() => setSideTab('details')}
                   className={`px-2.5 sm:px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     sideTab === 'details'
-                      ? 'bg-neutral-800 text-white font-semibold'
-                      : 'text-neutral-400 hover:text-white'
+                      ? isDarkMode
+                        ? 'bg-neutral-800 text-white font-semibold'
+                        : 'bg-white text-gray-900 shadow-2xs font-semibold'
+                      : isDarkMode
+                        ? 'text-neutral-400 hover:text-white'
+                        : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   Details
@@ -645,7 +653,9 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                   className={`px-2.5 sm:px-3 py-1 rounded-md font-medium transition-all cursor-pointer ${
                     sideTab === 'previewing'
                       ? 'bg-[#EA580C] text-white font-semibold'
-                      : 'text-neutral-400 hover:text-white'
+                      : isDarkMode
+                        ? 'text-neutral-400 hover:text-white'
+                        : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   Previewing
@@ -807,25 +817,39 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                           />
                         </div>
                       ) : project ? (
-                        <div className="w-full rounded-2xl border border-neutral-800 bg-[#0a0a0a] overflow-hidden shadow-xs">
+                        <div className={`w-full rounded-2xl border overflow-hidden shadow-xs ${
+                          isDarkMode
+                            ? 'border-neutral-800 bg-[#0a0a0a]'
+                            : 'border-gray-200 bg-white'
+                        }`}>
                           <button
                             onClick={() => setShowStepsDetail(!showStepsDetail)}
-                            className="w-full flex items-center justify-between p-3 text-xs font-medium text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                            className={`w-full flex items-center justify-between p-3 text-xs font-medium transition-colors cursor-pointer ${
+                              isDarkMode
+                                ? 'text-neutral-300 hover:text-white'
+                                : 'text-gray-700 hover:text-gray-900 bg-gray-50/80 hover:bg-gray-100'
+                            }`}
                           >
                             <div className="flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                              <span className="font-semibold text-neutral-200">Execution Plan</span>
-                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-mono">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                              <span className={`font-semibold ${isDarkMode ? 'text-neutral-200' : 'text-gray-900'}`}>Execution Plan</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                                isDarkMode
+                                  ? 'bg-emerald-500/15 text-emerald-400'
+                                  : 'bg-emerald-100 text-emerald-700'
+                              }`}>
                                 Verified
                               </span>
                             </div>
-                            <div className="flex items-center gap-1 text-[11px] text-neutral-400">
+                            <div className={`flex items-center gap-1 text-[11px] ${isDarkMode ? 'text-neutral-400' : 'text-gray-500'}`}>
                               <span>{showStepsDetail ? 'Hide Steps' : 'View Steps'}</span>
                               {showStepsDetail ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                             </div>
                           </button>
                           {showStepsDetail && (
-                            <div className="p-2 border-t border-neutral-800 bg-black">
+                            <div className={`p-2 border-t ${
+                              isDarkMode ? 'border-neutral-800 bg-black' : 'border-gray-200 bg-white'
+                            }`}>
                               <AgentActionTree
                                 prompt={lastUserPrompt}
                                 code={primaryFile?.content || currentCode}
@@ -1025,7 +1049,9 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
             </div>
 
             {/* Center: Device Presets (Mobile / Tablet / Laptop / 100%) */}
-            <div className="hidden sm:flex items-center gap-1 bg-[#0a0a0a] border border-[#222222] p-0.5 rounded-xl">
+            <div className={`hidden sm:flex items-center gap-1 p-0.5 rounded-xl border ${
+              isDarkMode ? 'bg-[#0a0a0a] border-[#222222]' : 'bg-gray-100 border-gray-200'
+            }`}>
               {devicePresets.map((preset) => {
                 const Icon = preset.icon;
                 const isActive = previewWidth === preset.width;
@@ -1036,7 +1062,9 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                     className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       isActive
                         ? 'bg-[#EA580C] text-white shadow-xs font-semibold'
-                        : 'text-neutral-400 hover:text-neutral-200'
+                        : isDarkMode
+                          ? 'text-neutral-400 hover:text-neutral-200'
+                          : 'text-gray-600 hover:text-gray-900'
                     }`}
                     title={preset.label}
                   >
@@ -1221,10 +1249,14 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
               /* Centered Empty State (Exact Match to Image 1!) */
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4">
                 <div className="space-y-1">
-                  <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-neutral-200">
+                  <h2 className={`font-serif text-2xl sm:text-3xl font-bold tracking-tight ${
+                    isDarkMode ? 'text-neutral-200' : 'text-gray-900'
+                  }`}>
                     What should we build today?
                   </h2>
-                  <p className="text-xs sm:text-sm text-neutral-500 max-w-sm mx-auto">
+                  <p className={`text-xs sm:text-sm max-w-sm mx-auto ${
+                    isDarkMode ? 'text-neutral-500' : 'text-gray-500'
+                  }`}>
                     Describe a page, game or tool. Forge writes the code and runs it live.
                   </p>
                 </div>
@@ -1235,14 +1267,20 @@ export const WebsiteStudio: React.FC<WebsiteStudioProps> = ({
                       key={idx}
                       onClick={() => handleCardClick(suggestion)}
                       disabled={isBuilding}
-                      className="text-left p-3 rounded-xl bg-[#0a0a0a] border border-[#1f1f1f] hover:border-[#EA580C]/60 text-xs text-neutral-300 hover:text-white transition-all cursor-pointer shadow-2xs"
+                      className={`text-left p-3 rounded-xl border text-xs transition-all cursor-pointer shadow-2xs ${
+                        isDarkMode
+                          ? 'bg-[#0a0a0a] border-[#1f1f1f] text-neutral-300 hover:text-white hover:border-[#EA580C]/60'
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:text-gray-900 hover:border-[#EA580C]/60'
+                      }`}
                     >
                       {suggestion}
                     </button>
                   ))}
                 </div>
 
-                <span className="font-serif text-sm text-neutral-600 pt-6">
+                <span className={`font-serif text-sm pt-6 ${
+                  isDarkMode ? 'text-neutral-600' : 'text-gray-400'
+                }`}>
                   Your page will appear here
                 </span>
               </div>

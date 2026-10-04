@@ -13,6 +13,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: string | null; needsConfirmation?: boolean }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
+  resendConfirmation: (email: string) => Promise<{ error: string | null }>;
   /** @deprecated Google sign-in is not supported. Kept to avoid compile errors. */
   signInWithGoogle: () => Promise<{ error: string | null }>;
   refreshProfile: () => Promise<void>;
@@ -144,15 +145,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      const emailRedirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}`
+          : undefined;
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { display_name: displayName },
+          emailRedirectTo,
         },
       });
 
       if (error) return { error: error.message };
+
+      // Supabase returns an empty identities array if a user with this email already exists
+      if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        return {
+          error: 'An account with this email already exists. Please sign in or reset your password.',
+          needsConfirmation: false,
+        };
+      }
 
       // Email confirmation required when user exists but session is null
       if (data.user && !data.session) {
@@ -162,6 +177,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null, needsConfirmation: false };
     } catch (err: any) {
       return { error: err?.message ?? 'Unexpected sign-up error.' };
+    }
+  };
+
+  const resendConfirmation = async (
+    email: string
+  ): Promise<{ error: string | null }> => {
+    const supabase = getSupabase();
+    if (!supabase || !isSupabaseConfigured) {
+      return { error: 'Supabase is not configured. Check your .env settings.' };
+    }
+
+    try {
+      const emailRedirectTo =
+        typeof window !== 'undefined'
+          ? `${window.location.origin}`
+          : undefined;
+
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo,
+        },
+      });
+
+      if (error) return { error: error.message };
+      return { error: null };
+    } catch (err: any) {
+      return { error: err?.message ?? 'Failed to resend confirmation email.' };
     }
   };
 
@@ -244,6 +288,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         resetPassword,
+        resendConfirmation,
         signInWithGoogle,
         refreshProfile,
         updateProfileData,}}

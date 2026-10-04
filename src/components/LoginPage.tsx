@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
+import { Sparkles, Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, Loader2, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface LoginPageProps {
@@ -9,7 +9,7 @@ interface LoginPageProps {
 type ActiveTab = 'signin' | 'signup' | 'reset';
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onBypassAsGuest }) => {
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, resendConfirmation } = useAuth();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('signin');
 
@@ -30,6 +30,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBypassAsGuest }) => {
   const [signUpLoading, setSignUpLoading] = useState(false);
   const [signUpError, setSignUpError] = useState<string | null>(null);
   const [signUpNeedsConfirmation, setSignUpNeedsConfirmation] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMessage, setResendMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Reset state
   const [resetEmail, setResetEmail] = useState('');
@@ -43,8 +45,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBypassAsGuest }) => {
     setSignInError(null);
     setSignUpError(null);
     setSignUpNeedsConfirmation(false);
+    setResendMessage(null);
     setResetError(null);
     setResetSuccess(false);
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!signUpEmail) return;
+    setResendLoading(true);
+    setResendMessage(null);
+    const { error } = await resendConfirmation(signUpEmail);
+    setResendLoading(false);
+    if (error) {
+      setResendMessage({ type: 'error', text: error });
+    } else {
+      setResendMessage({
+        type: 'success',
+        text: 'A new confirmation email has been sent! Check your inbox and spam folder.',
+      });
+    }
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -232,9 +251,68 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBypassAsGuest }) => {
           {activeTab === 'signup' && (
             <>
               {signUpNeedsConfirmation ? (
-                <div className="w-full p-4 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900/60 flex items-start gap-3 text-left text-sm text-green-700 dark:text-green-300">
-                  <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-green-500" />
-                  <span>Check your email to confirm your account!</span>
+                <div className="w-full flex flex-col gap-3">
+                  <div className="w-full p-4 rounded-xl bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-900/60 flex items-start gap-3 text-left text-sm text-green-700 dark:text-green-300">
+                    <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-green-500" />
+                    <div>
+                      <p className="font-semibold text-green-800 dark:text-green-200">Confirmation email sent!</p>
+                      <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                        Please check <strong>{signUpEmail}</strong> to activate your account.
+                      </p>
+                    </div>
+                  </div>
+
+                  {resendMessage && (
+                    <div
+                      className={`w-full p-3 rounded-xl border flex items-start gap-2.5 text-left text-xs ${
+                        resendMessage.type === 'success'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900/60 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300'
+                      }`}
+                    >
+                      {resendMessage.type === 'success' ? (
+                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+                      )}
+                      <span>{resendMessage.text}</span>
+                    </div>
+                  )}
+
+                  <div className="w-full p-3 rounded-xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 flex items-start gap-2.5 text-left text-xs text-blue-700 dark:text-blue-300">
+                    <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-500" />
+                    <div>
+                      <span className="font-semibold">Didn&apos;t receive it?</span>
+                      <p className="text-[11px] text-blue-600 dark:text-blue-300/80 mt-0.5 leading-relaxed">
+                        1. Check your <strong>Spam / Junk</strong> folder.<br />
+                        2. If you already clicked the link earlier, your email is confirmed! Try signing in below.<br />
+                        3. Free Supabase projects allow 3-4 emails per hour.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 mt-1">
+                    <button
+                      type="button"
+                      disabled={resendLoading}
+                      onClick={handleResendConfirmation}
+                      className="w-full py-2 px-3 rounded-xl border border-[var(--rose-border,#E5E7EB)] dark:border-[#334155] hover:bg-gray-100 dark:hover:bg-[#1E293B] text-xs font-medium text-[var(--rose-text,#1F2937)] dark:text-white transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {resendLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                      <span>{resendLoading ? 'Resending email…' : 'Resend verification email'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSignInEmail(signUpEmail);
+                        handleTabChange('signin');
+                      }}
+                      className="w-full py-2.5 px-4 rounded-xl bg-[var(--rose-surface-card,#F3F4F6)] hover:bg-[var(--rose-border,#E5E7EB)] dark:bg-[#1E293B] dark:hover:bg-[#334155] text-xs font-semibold text-[var(--rose-text,#1F2937)] dark:text-white transition-colors cursor-pointer text-center"
+                    >
+                      ← Back to Sign In
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleSignUp} className="w-full flex flex-col gap-4">

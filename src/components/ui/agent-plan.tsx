@@ -379,12 +379,12 @@ export default function Plan({
   };
 
   return (
-    <div className={`bg-background text-foreground w-full ${className}`}>
+    <div className={`w-full ${className}`}>
       <motion.div 
         className={`rounded-xl overflow-hidden ${
           className.includes('border-none')
             ? 'bg-transparent'
-            : 'bg-card border border-border shadow-xs'
+            : 'bg-white dark:bg-[#0c0c0c] border border-neutral-200 dark:border-neutral-800 shadow-xs'
         }`}
         initial={{ opacity: 0, y: 10 }}
         animate={{ 
@@ -448,7 +448,7 @@ export default function Plan({
                             ) : task.status === "failed" ? (
                               <CircleX className="h-4.5 w-4.5 text-red-500" />
                             ) : (
-                              <Circle className="text-muted-foreground h-4.5 w-4.5" />
+                              <Circle className="text-neutral-400 dark:text-neutral-500 h-4.5 w-4.5" />
                             )}
                           </motion.div>
                         </AnimatePresence>
@@ -462,8 +462,8 @@ export default function Plan({
                           <span
                             className={`text-xs sm:text-sm font-semibold tracking-tight leading-snug break-words ${
                               isCompleted
-                                ? "text-muted-foreground line-through font-normal"
-                                : "text-foreground"
+                                ? "text-neutral-400 dark:text-neutral-500 line-through font-normal"
+                                : "text-neutral-900 dark:text-neutral-100"
                             }`}
                           >
                             {task.title}
@@ -500,14 +500,14 @@ export default function Plan({
                           <motion.span
                             className={`rounded px-1.5 py-0.5 text-[10px] sm:text-xs font-medium capitalize ${
                               task.status === "completed"
-                                ? "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400"
+                                ? "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-400 border border-green-200/60 dark:border-green-800/40"
                                 : task.status === "in-progress"
-                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/40"
                                   : task.status === "need-help"
-                                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400"
+                                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/60 dark:text-yellow-400 border border-yellow-200/60 dark:border-yellow-800/40"
                                     : task.status === "failed"
-                                      ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400"
-                                      : "bg-muted text-muted-foreground"
+                                      ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-400 border border-red-200/60 dark:border-red-800/40"
+                                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
                             }`}
                             variants={statusBadgeVariants}
                             initial="initial"
@@ -532,7 +532,7 @@ export default function Plan({
                           layout
                         >
                           {/* Vertical connecting line aligned with task icon */}
-                          <div className="absolute top-0 bottom-0 left-[20px] border-l-2 border-dashed border-muted-foreground/30" />
+                          <div className="absolute top-0 bottom-0 left-[20px] border-l-2 border-dashed border-neutral-300 dark:border-neutral-700" />
                           <ul className="border-muted mt-1 mr-2 mb-1.5 ml-3 space-y-0.5">
                             {task.subtasks.map((subtask) => {
                               const subtaskKey = `${task.id}-${subtask.id}`;
@@ -589,7 +589,7 @@ export default function Plan({
                                           ) : subtask.status === "failed" ? (
                                             <CircleX className="h-3.5 w-3.5 text-red-500" />
                                           ) : (
-                                            <Circle className="text-muted-foreground h-3.5 w-3.5" />
+                                            <Circle className="text-neutral-400 dark:text-neutral-500 h-3.5 w-3.5" />
                                           )}
                                         </motion.div>
                                       </AnimatePresence>
@@ -598,8 +598,8 @@ export default function Plan({
                                     <span
                                       className={`cursor-pointer text-xs sm:text-sm font-medium leading-snug break-words flex-1 min-w-0 ${
                                         subtask.status === "completed"
-                                          ? "text-muted-foreground line-through font-normal"
-                                          : "text-foreground"
+                                          ? "text-neutral-400 dark:text-neutral-500 line-through font-normal"
+                                          : "text-neutral-900 dark:text-neutral-100"
                                       }`}
                                     >
                                       {subtask.title}
@@ -609,7 +609,7 @@ export default function Plan({
                                   <AnimatePresence mode="wait">
                                     {isSubtaskExpanded && (
                                       <motion.div 
-                                        className="text-muted-foreground border-foreground/20 mt-1 ml-1.5 border-l border-dashed pl-5 text-xs overflow-hidden"
+                                        className="text-neutral-600 dark:text-neutral-400 border-neutral-300 dark:border-neutral-700 mt-1 ml-1.5 border-l border-dashed pl-5 text-xs overflow-hidden"
                                         variants={subtaskDetailsVariants}
                                         initial="hidden"
                                         animate="visible"
@@ -619,14 +619,14 @@ export default function Plan({
                                         <p className="py-1">{subtask.description}</p>
                                         {subtask.tools && subtask.tools.length > 0 && (
                                           <div className="mt-0.5 mb-1 flex flex-wrap items-center gap-1.5">
-                                            <span className="text-muted-foreground font-medium">
+                                            <span className="text-neutral-600 dark:text-neutral-400 font-medium text-[11px]">
                                               MCP Servers:
                                             </span>
                                             <div className="flex flex-wrap gap-1">
                                               {subtask.tools.map((tool, idx) => (
                                                 <motion.span
                                                   key={idx}
-                                                  className="bg-secondary/40 text-secondary-foreground rounded px-1.5 py-0.5 text-[10px] font-medium shadow-sm"
+                                                  className="bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded px-1.5 py-0.5 text-[10px] font-medium shadow-xs"
                                                   initial={{ opacity: 0, y: -5 }}
                                                   animate={{ 
                                                     opacity: 1, 

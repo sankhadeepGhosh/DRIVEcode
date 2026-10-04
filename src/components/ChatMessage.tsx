@@ -309,8 +309,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                         </div>
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                           message.isStreaming
-                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 animate-pulse'
-                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                         }`}>
                           {message.isStreaming ? 'Streaming...' : 'Sandbox Ready'}
                         </span>
