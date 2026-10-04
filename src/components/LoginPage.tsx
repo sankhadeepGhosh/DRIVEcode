@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, Loader2, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { DriveCodeLogo } from './ui/DriveCodeLogo';
 
 interface LoginPageProps {
   onBypassAsGuest?: () => void;
@@ -137,15 +138,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onBypassAsGuest }) => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[var(--rose-background,#FAF9F6)] dark:bg-[#0B1120] px-4">
       <div className="relative w-full max-w-lg">
-        {/* Ambient glow */}
-        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-32 bg-[#E11D48]/15 blur-3xl pointer-events-none rounded-full" />
+        {/* Ambient glow matching new cyber prompt design */}
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-36 bg-sky-500/20 blur-3xl pointer-events-none rounded-full" />
 
         {/* Card */}
         <div className="relative w-full bg-[var(--rose-surface,#FFFFFF)] dark:bg-[#131E32] rounded-2xl border border-[var(--rose-border,#E5E7EB)] dark:border-[#1E293B] shadow-xl p-6 sm:p-8 flex flex-col items-center">
 
-          {/* Logo */}
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#E11D48] to-[#FB7185] flex items-center justify-center text-white shadow-lg shadow-[#E11D48]/20 mb-4">
-            <Sparkles className="w-7 h-7" />
+          {/* Logo matching new prompt design */}
+          <div className="mb-4">
+            <DriveCodeLogo size={58} animated />
           </div>
 
           {/* Heading */}

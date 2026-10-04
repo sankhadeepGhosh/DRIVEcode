@@ -15,6 +15,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { ProcessingBanner } from './components/ProcessingBanner';
 import { LoginPage } from './components/LoginPage';
 import { WebsiteStudio } from './components/WebsiteStudio';
+import { AiLoader } from './components/ui/ai-loader';
 import { useAuth } from './context/AuthContext';
 import { SupabaseDb } from './lib/supabase/db';
 import {
@@ -938,18 +939,9 @@ export function App() {
 
   const [isGuestBypassed, setIsGuestBypassed] = useState(false);
 
-  // If auth is loading, show clean loading state
+  // If auth is loading, show high-tech animated AI loader matching new design
   if (authLoading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#FAF9F6] text-gray-900">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center font-serif text-xl font-bold shadow-md animate-pulse">
-            D
-          </div>
-          <p className="text-xs text-gray-400 font-medium tracking-wide">Loading DRIVEcode...</p>
-        </div>
-      </div>
-    );
+    return <AiLoader size={200} text="DRIVEcode" />;
   }
 
   // If user is not authenticated and hasn't bypassed as guest, show modern LoginPage

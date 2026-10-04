@@ -1,13 +1,5 @@
-"use client";
+import { Component } from "@/components/ui/ai-loader";
 
-import Plan from "@/components/ui/agent-plan";
-
-export function Demo() {
-  return (
-    <div className="flex flex-col p-4 w-full h-full">
-      <Plan />
-    </div>
-  );
+export default function DemoOne() {
+  return <Component />;
 }
-
-export default Demo;

@@ -18,6 +18,7 @@ import {
   User,
 } from 'lucide-react';
 import { Conversation, AIModelId, EffortLevel, UserProfile } from '../types';
+import { DriveCodeLogo } from './ui/DriveCodeLogo';
 
 interface SidebarProps {
   conversations: Conversation[];
@@ -280,6 +281,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-3.5 border-b border-[var(--rose-border)] space-y-2.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
+              <DriveCodeLogo size={22} animated />
               <span className="font-serif font-bold text-[var(--rose-text)] tracking-wider text-base">DRIVEcode</span>
             </div>
             <button
