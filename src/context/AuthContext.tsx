@@ -134,6 +134,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const getAuthRedirectUrl = (): string | undefined => {
+    if (typeof window === 'undefined') return undefined;
+    const configuredAppUrl = ((import.meta.env as any).VITE_APP_URL || '').trim();
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    // If running on localhost and a remote public URL is configured, use it so email links work on mobile
+    if (isLocal && configuredAppUrl && !configuredAppUrl.includes('localhost') && !configuredAppUrl.includes('127.0.0.1')) {
+      return configuredAppUrl.replace(/\/$/, '');
+    }
+
+    return window.location.origin;
+  };
+
   const signUp = async (
     email: string,
     password: string,
@@ -145,10 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const emailRedirectTo =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}`
-          : undefined;
+      const emailRedirectTo = getAuthRedirectUrl();
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -189,10 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const emailRedirectTo =
-        typeof window !== 'undefined'
-          ? `${window.location.origin}`
-          : undefined;
+      const emailRedirectTo = getAuthRedirectUrl();
 
       const { error } = await supabase.auth.resend({
         type: 'signup',
@@ -233,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
+        redirectTo: getAuthRedirectUrl() || window.location.origin,
       });
       if (error) return { error: error.message };
       return { error: null };
