@@ -1,7 +1,6 @@
 import React from 'react';
-import { Globe, Hammer, Zap, Activity } from 'lucide-react';
 import { AuraState, ColorPreset } from '../types';
-import { AnimeRose } from './AnimeRose';
+import { DriveCodeLogo } from './ui/DriveCodeLogo';
 
 interface AuraProps {
   state: AuraState;
@@ -13,7 +12,6 @@ interface AuraProps {
 export const Aura: React.FC<AuraProps> = ({
   state,
   size = 'md',
-  preset = 'rose',
   className = '',
 }) => {
   const containerSizes = {
@@ -22,19 +20,19 @@ export const Aura: React.FC<AuraProps> = ({
     lg: 'w-16 h-16',
   };
 
-  const roseSizes = {
-    sm: 'sm' as const,
-    md: 'md' as const,
-    lg: 'xl' as const,
+  const logoSizes = {
+    sm: 26,
+    md: 34,
+    lg: 60,
   };
 
-  // State-driven aura ring glow and dynamics
-  let glowClasses = 'scale-100 opacity-20';
+  // State-driven aura ring glow and dynamics matching the cyber neon blue design
+  let glowClasses = 'scale-100 opacity-25';
   let pulseSpeed = 'duration-1000';
 
   switch (state) {
     case 'typing':
-      glowClasses = 'scale-110 opacity-40 animate-pulse';
+      glowClasses = 'scale-110 opacity-50 animate-pulse';
       pulseSpeed = 'duration-700';
       break;
     case 'listening':
@@ -70,7 +68,7 @@ export const Aura: React.FC<AuraProps> = ({
       break;
     case 'idle':
     default:
-      glowClasses = 'scale-100 opacity-25 hover:opacity-40 transition-all';
+      glowClasses = 'scale-100 opacity-30 hover:opacity-50 transition-all';
       break;
   }
 
@@ -78,23 +76,9 @@ export const Aura: React.FC<AuraProps> = ({
     <div
       className={`relative flex items-center justify-center shrink-0 ${containerSizes[size]} ${className}`}
     >
-      {/* Outer ambient glow ring tinted by theme */}
+      {/* Outer ambient glow ring in neon cyber cyan/blue */}
       <div
-        className={`absolute inset-0 rounded-full blur-[7px] pointer-events-none transition-all ${pulseSpeed} ${glowClasses}`}
-        style={{
-          backgroundColor:
-            preset === 'ocean'
-              ? '#38BDF8'
-              : preset === 'forest'
-              ? '#34D399'
-              : preset === 'lavender'
-              ? '#A78BFA'
-              : preset === 'amber'
-              ? '#FBBF24'
-              : preset === 'monochrome'
-              ? '#71717A'
-              : '#FB7185',
-        }}
+        className={`absolute inset-0 rounded-full blur-[8px] pointer-events-none transition-all ${pulseSpeed} ${glowClasses} bg-gradient-to-tr from-[#005dff] via-[#38bdf8] to-[#60a5fa]`}
       />
 
       {/* Rotating secondary ring for active agent states */}
@@ -104,13 +88,13 @@ export const Aura: React.FC<AuraProps> = ({
         state === 'researching' ||
         state === 'building') && (
         <div
-          className="absolute -inset-1 rounded-full border border-current opacity-40 animate-spin pointer-events-none"
-          style={{ color: 'var(--rose-accent)' }}
+          className="absolute -inset-1 rounded-full border border-sky-400 opacity-60 animate-spin pointer-events-none"
         />
       )}
 
-      {/* Center Original Anime Rose Artwork */}
-      <AnimeRose state={state} size={roseSizes[size]} preset={preset} />
+      {/* Center DRIVEcode Cyber Emblem */}
+      <DriveCodeLogo size={logoSizes[size]} animated={state !== 'idle'} />
     </div>
   );
 };
+

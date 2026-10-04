@@ -16,6 +16,7 @@ import { ProcessingBanner } from './components/ProcessingBanner';
 import { LoginPage } from './components/LoginPage';
 import { WebsiteStudio } from './components/WebsiteStudio';
 import { AiLoader } from './components/ui/ai-loader';
+import { DriveCodeLogo } from './components/ui/DriveCodeLogo';
 import { useAuth } from './context/AuthContext';
 import { SupabaseDb } from './lib/supabase/db';
 import {
@@ -1029,12 +1030,12 @@ export function App() {
                   <Menu className="w-5 h-5" />
                 </button>
 
-                {/* DRIVEcode Aura Badge & Status */}
-                <div className="flex items-center gap-2">
-                  <Aura state={auraState} size="sm" />
+                {/* DRIVEcode Brand Logo & Status */}
+                <div className="flex items-center gap-2.5">
+                  <DriveCodeLogo size={28} animated={auraState !== 'idle'} />
                   <div className="flex flex-col">
-                    <span className="font-serif font-bold text-sm tracking-wide text-[var(--rose-text)]">DRIVEcode</span>
-                    <span className="text-[10px] text-[var(--rose-text-muted)] capitalize -mt-0.5">
+                    <span className="font-serif font-bold text-sm tracking-wide text-[var(--rose-text)] dark:text-white">DRIVEcode</span>
+                    <span className="text-[10px] text-[var(--rose-text-muted)] dark:text-gray-400 capitalize -mt-0.5">
                       {auraState === 'idle' ? 'Ready' : auraState}
                     </span>
                   </div>
@@ -1095,19 +1096,19 @@ export function App() {
                   <div className={`${chatWidthClass} mx-auto w-full`}>
                     {!currentConversation || currentConversation.messages.length === 0 ? (
                       /* Clean Minimalist Empty State */
-                      <div className="h-full min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-4 animate-in fade-in duration-300">
-                        <Aura state={auraState} size="lg" />
+                      <div className="h-full min-h-[50vh] flex flex-col items-center justify-center text-center p-6 space-y-5 animate-in fade-in duration-300 select-none">
+                        <DriveCodeLogo size={68} animated />
                         <div>
-                          <h2 className="font-serif text-2xl font-bold text-gray-900 mb-1">
+                          <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[var(--rose-text,#09090B)] dark:text-white mb-2 tracking-tight">
                             Welcome to DRIVEcode
                           </h2>
-                          <p className="text-xs text-gray-500 max-w-md">
+                          <p className="text-xs sm:text-sm text-[var(--rose-text-muted,#71717A)] dark:text-gray-400 max-w-md mx-auto">
                             A personal AI companion. Ask anything, initiate real-time web research, or ask to build a website with live preview.
                           </p>
                         </div>
 
                         {/* Quick Starters */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-md pt-4 text-left">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-md pt-3 text-left">
                           {[
                             { title: 'Build a website', desc: 'Create a modern landing page with live interactive preview' },
                             { title: 'Deep web research', desc: 'Synthesize verified citations and cross-checked sources' },
@@ -1122,12 +1123,12 @@ export function App() {
                                 }
                                 handleSendMessage(card.title);
                               }}
-                              className="p-3 bg-white hover:bg-rose-50/40 border border-gray-200/80 hover:border-rose-200 rounded-xl transition-all text-xs cursor-pointer shadow-2xs group"
+                              className="p-3 bg-[var(--rose-surface-card,#FFFFFF)] dark:bg-[#111111] hover:bg-sky-50/60 dark:hover:bg-sky-950/40 border border-[var(--rose-border,#E5E7EB)] dark:border-[#222222] hover:border-sky-400/60 dark:hover:border-sky-500/50 rounded-xl transition-all text-xs cursor-pointer shadow-2xs group"
                             >
-                              <span className="font-bold text-gray-900 group-hover:text-[#E11D48] block mb-0.5">
+                              <span className="font-bold text-[var(--rose-text,#09090B)] dark:text-white group-hover:text-sky-500 dark:group-hover:text-sky-400 block mb-0.5">
                                 {card.title}
                               </span>
-                              <span className="text-[11px] text-gray-400 block line-clamp-2">
+                              <span className="text-[11px] text-[var(--rose-text-muted,#71717A)] dark:text-gray-400 block line-clamp-2">
                                 {card.desc}
                               </span>
                             </button>

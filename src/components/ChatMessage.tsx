@@ -21,6 +21,7 @@ import {
 import { Message, GeneratedProject, AgentActionStep } from '../types';
 import { ResearchPanel } from './ResearchPanel';
 import { AgentActionTree } from './AgentActionTree';
+import { DriveCodeLogo } from './ui/DriveCodeLogo';
 
 interface ChatMessageProps {
   message: Message;
@@ -104,9 +105,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </div>
             )
           ) : (
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#E11D48] to-[#FB7185] text-white flex items-center justify-center shadow-2xs">
-              <Sparkles className="w-3.5 h-3.5" />
-            </div>
+            <DriveCodeLogo size={28} />
           )}
         </div>
 

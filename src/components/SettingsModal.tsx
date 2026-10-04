@@ -38,6 +38,7 @@ import { FONT_DEFINITIONS, FONT_SIZES } from '../lib/fonts';
 import { COLOR_PRESETS } from '../lib/storage';
 import { UsageTracker, AggregatedUsage } from '../lib/usage-tracker';
 import { DirectAIClient } from '../lib/ai/direct-client';
+import { DriveCodeLogo } from './ui/DriveCodeLogo';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -262,7 +263,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       <div className="bg-white rounded-2xl shadow-xl border border-gray-200 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Modal Header */}
         <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <DriveCodeLogo size={24} />
             <h2 className="font-semibold text-gray-900 text-lg">DRIVEcode Settings</h2>
           </div>
           <button
